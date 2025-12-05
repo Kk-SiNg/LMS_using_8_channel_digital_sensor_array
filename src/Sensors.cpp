@@ -1,5 +1,5 @@
 /*
- * Sensors. cpp
+ * Sensors.cpp
  * 8-Channel RLS-08 - DIGITAL MODE
  * INVERTED LOGIC: 0 = White Line, 1 = Black Surface
  */
@@ -143,16 +143,16 @@ PathOptions Sensors::getAvailablePaths() {
         paths.left = (sensors[6] || sensors[7]);
         
         // RIGHT: S1 or S2 active
-        paths. right = (sensors[0] || sensors[1]);
+        paths.right = (sensors[0] || sensors[1]);
         
         // STRAIGHT: S4 or S5 active (center)
         paths.straight = (sensors[3] || sensors[4]);
     }
     else {
         // Normal line - not a junction (2-3 sensors)
-        paths. left = false;
-        paths. right = false;
-        paths. straight = (activeCount > 0);
+        paths.left = false;
+        paths.right = false;
+        paths.straight = (activeCount > 0);
     }
     
     return paths;
@@ -204,17 +204,13 @@ bool Sensors::isEndPoint() {
     bool sensors[8];
     readDigital(sensors);
     
-    // Finish square = most/all sensors see white
-    int whiteCount = 0;
+    // Finish square
     for (uint8_t i = 0; i < 8; i++) {
-        if (sensors[i]) {
-            whiteCount++;
+        if (!sensors[i]) {
+            return true;
         }
     }
-    
-    // Finish square: 6-8 sensors active
-    // Normal line: 2-3 sensors active
-    return (whiteCount >= 6);
+    return false;
 }
 
 // ========== UTILITY ==========
@@ -225,8 +221,4 @@ void Sensors::getSensorArray(bool* arr) {
 
 void Sensors::getAnalogArray(uint16_t* arr) {
     readRaw(arr);  // Returns actual digital values (0 or 1)
-}
-
-void Sensors::calibrate() {
-    Serial.println("Digital mode - no calibration needed");
 }

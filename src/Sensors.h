@@ -43,7 +43,6 @@ public:
     void getAnalogArray(uint16_t* arr);
     
     bool onLine();
-    void calibrate();
     void printCalibration();
     
     int getActiveSensorCount();

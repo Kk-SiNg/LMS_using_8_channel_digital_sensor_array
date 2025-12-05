@@ -227,7 +227,8 @@ void loop() {
             }
             buttonPressStart = 0;
         }
-    } else {
+    }
+    else {
         buttonPressStart = 0;
     }
     
@@ -273,7 +274,7 @@ void loop() {
             
         case MAPPING:
         {
-            if (! robotRunning) {
+            if (!robotRunning) {
                 motors.stopBrake();
                 currentState = FINISHED;
                 Serial.println("\n>>> STOPPED");
@@ -285,7 +286,6 @@ void loop() {
             if (sensors.isEndPoint()) {
                 if (lineEndStartTime == 0) {
                     lineEndStartTime = millis();
-                    motors.stopBrake();  // Stop immediately
                 } 
                 else if (millis() - lineEndStartTime > LINE_END_CONFIRM_TIME) {
                     // Confirmed line end
@@ -294,25 +294,19 @@ void loop() {
                     
                     unsigned long mappingTime = (millis() - mappingStartTime) / 1000;
                     
-                    Serial.println("\n╔════════════════════════════════════════╗");
-                    Serial.println("║   LINE END DETECTED - MAPPING DONE    ║");
-                    Serial.println("╚════════════════════════════════════════╝");
-                    Serial.print("Mapping completed in: ");
-                    Serial.print(mappingTime);
-                    Serial.println(" seconds");
-                    
                     if (client && client.connected()) {
                         client.println("\n>>> LINE END DETECTED - Mapping Complete!");
                         client.print("Time: ");
                         client.print(mappingTime);
-                        client.println("s");
+                        client.println("sec");
                     }
                     
                     currentState = OPTIMIZING;
                     lineEndStartTime = 0;
                     break;
                 }
-            } else {
+            }
+            else {
                 // Line detected - reset timer
                 lineEndStartTime = 0;
             }
@@ -325,11 +319,11 @@ void loop() {
                 bool sensorVals[8];
                 sensors.getSensorArray(sensorVals);
                 
-                Serial.print("Sensors: [");
+                client.print("Sensors: [");
                 for(int i = 0; i < 8; i++) {
-                    Serial.print(sensorVals[i] ? "█" : "·");
+                    client.print(sensorVals[i] ? "█" : "·");
                 }
-                Serial.printf("] Err:%.1f Speed:%d Path:%s DynDB:%lums\n", 
+                client.printf("] Err:%.1f Speed:%d Path:%s DynDB:%lums\n", 
                              sensors.getLineError(), baseSpeed, rawPath.c_str(), getDynamicDebounce());
                 
                 lastDebugPrint = millis();
@@ -353,29 +347,7 @@ void loop() {
                 if (isJunction) {
                     motors.stopBrake();
                     
-                    long segmentTicks = motors.getAverageCount();
-                    totalSegmentTicks += segmentTicks;
-                    
-                    if (pathIndex >= MAX_PATH_LENGTH) {
-                        Serial.println("❌ ERROR: Path array full!");
-                        currentState = FINISHED;
-                        break;
-                    }
-                    
-                    junctionCount++;
-                    
                     JunctionType jType = sensors.classifyJunction(paths);
-                    
-                    Serial.print("Junction ");
-                    Serial.print(pathIndex + 1);
-                    Serial.print(": ");
-                    Serial.print(junctionTypeToString(jType));
-                    Serial.print(" (");
-                    if(paths.left) Serial.print("L");
-                    if(paths.straight) Serial.print("S");
-                    if(paths.right) Serial.print("R");
-                    Serial.print(") Ticks:");
-                    Serial.println(segmentTicks);
                     
                     if (client && client.connected()) {
                         client.printf("J%d: ", junctionCount);
@@ -385,35 +357,51 @@ void loop() {
                         client.println();
                     }
                     
-                    // Move to junction center
+                    // STEP 1: Move to center FIRST (part of segment)
                     motors.moveForward(TICKS_TO_CENTER);
-                    delay(100);
+
+                    // STEP 2: Read complete segment (including center move)
+                    long segmentTicks = motors.getAverageCount();
+
+                    // STEP 3: Save segment
+                    pathSegments[pathIndex] = segmentTicks;
+                    pathIndex++;
+
+                    // STEP 4: Clear encoders BEFORE turn
+                    motors.clearEncoders();
+
+                    if (pathIndex >= MAX_PATH_LENGTH) {
+                        Serial.println("❌ ERROR: Path array full!");
+                        currentState = FINISHED;
+                        break;
+                    }
                     
+                    junctionCount++;
+
+                    bool sensorVals[8];
+                    sensors.getSensorArray(sensorVals);
+
                     // === LSRB Logic: Left > Straight > Right > Back ===
                     if (paths.left) {
-                        Serial.println("  → Taking LEFT");
+                        if (client && client.connected()) client.println("  → taking left");
                         motors.turn_90_left();
                         rawPath += 'L';
                     }
-                    else if (paths.straight) {
-                        Serial.println("  → Going STRAIGHT");
+                    else if (sensorVals[3] && sensorVals[4]) {
+                        if (client && client.connected()) client.println("  → going straight");
                         rawPath += 'S';
                     }
                     else if (paths.right) {
-                        Serial.println("  → Taking RIGHT");
+                        if (client && client.connected()) client.println("  → Taking RIGHT");
                         motors.turn_90_right();
                         rawPath += 'R';
                     }
                     else {
                         // Dead end - turn back
-                        Serial.println("  → DEAD END - Turning back");
+                        if (client && client.connected()) client.println("  → DEAD END - Turning back");
                         motors.turn_180_back();
                         rawPath += 'B';
                     }
-                    
-                    // Save segment data
-                    pathSegments[pathIndex] = segmentTicks;
-                    pathIndex++;
                     
                     // Update average segment length
                     if (pathIndex > 0) {
