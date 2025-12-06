@@ -100,8 +100,8 @@ unsigned long lineEndStartTime = 0;
 const unsigned long LINE_END_CONFIRM_TIME = 150;
 
 // === Performance Metrics ===
-float avgSegmentLength = 0.0;
-long totalSegmentTicks = 0;
+// float avgSegmentLength = 0.0;
+// long totalSegmentTicks = 0;
 
 // === Function Declarations ===
 void setupWiFi();
@@ -253,7 +253,7 @@ void loop() {
                     robotRunning = true;
                     pathIndex = 0;
                     rawPath = "";
-                    totalSegmentTicks = 0;
+                    // totalSegmentTicks = 0;
                     junctionCount = 0;
                     lastJunctionTime = 0;
                     lineEndStartTime = 0;
@@ -365,7 +365,6 @@ void loop() {
 
                     // STEP 3: Save segment
                     pathSegments[pathIndex] = segmentTicks;
-                    pathIndex++;
 
                     // STEP 4: Clear encoders BEFORE turn
                     motors.clearEncoders();
@@ -403,10 +402,13 @@ void loop() {
                         rawPath += 'B';
                     }
                     
-                    // Update average segment length
-                    if (pathIndex > 0) {
-                        avgSegmentLength = (float)totalSegmentTicks / (float)pathIndex;
-                    }
+                    pathIndex++;
+
+
+                    // // Update average segment length(currently useless)
+                    // if (pathIndex > 0) {
+                    //     avgSegmentLength = (float)totalSegmentTicks / (float)pathIndex;
+                    // }
                     
                     // Reset after junction
                     motors.clearEncoders();
@@ -416,7 +418,6 @@ void loop() {
                     delay(100);
                 }
             }
-            
             break;
         }
         
@@ -426,28 +427,31 @@ void loop() {
             robotRunning = false;
             
             unsigned long mappingTime = (millis() - mappingStartTime) / 1000;
-            
-            Serial.println("\n╔════════════════════════════════════════╗");
-            Serial.println("║  RUN 1 COMPLETE - OPTIMIZING PATH    ║");
-            Serial.println("╚════════════════════════════════════════╝");
-            Serial.print("Mapping time: ");
-            Serial.print(mappingTime);
-            Serial.println(" seconds");
-            Serial.print("Raw Path: ");
-            Serial.print(rawPath);
-            Serial.print(" (");
-            Serial.print(rawPath.length());
-            Serial.println(" moves)");
-            Serial.print("Average segment: ");
-            Serial.print(avgSegmentLength, 1);
-            Serial.println(" ticks");
+
+            if (client && client.connected()){
+                client.println("\n╔════════════════════════════════════════╗");
+                client.println("║  RUN 1 COMPLETE - OPTIMIZING PATH    ║");
+                client.println("╚════════════════════════════════════════╝");
+                client.print("Mapping time: ");
+                client.print(mappingTime);
+                client.println(" seconds");
+                client.print("Raw Path: ");
+                client.print(rawPath);
+                client.print(" (");
+                client.print(rawPath.length());
+                client.println(" moves)");
+                // Serial.print("Average segment: ");
+                // Serial.print(avgSegmentLength, 1);
+                // Serial.println(" ticks");
+            }
             
             if (rawPath.length() == 0) {
-                Serial.println("❌ ERROR: No path recorded!");
+                if (client && client.connected()) client.println("❌ ERROR: No path recorded!");
                 currentState = FINISHED;
                 break;
             }
             
+            // copy path
             optimizedPath = rawPath;
             optimizedPathLength = rawPath.length();
             
@@ -456,7 +460,7 @@ void loop() {
                 optimizedSegments[i] = pathSegments[i];
             }
             
-            Serial.println("\nOptimizing path...");
+            if (client && client.connected()) client.println("\nOptimizing path...");
             
             // === Path Optimization with multiple iterations ===
             int iterations = 0;
@@ -470,19 +474,10 @@ void loop() {
                 
                 if(oldLength == optimizedPathLength) {
                     consecutiveNoChange++;
-                } else {
-                    consecutiveNoChange = 0;
-                    Serial.print("  Iteration ");
-                    Serial.print(iterations + 1);
-                    Serial.print(": ");
-                    Serial.print(oldLength);
-                    Serial.print(" → ");
-                    Serial.print(optimizedPathLength);
-                    Serial.print(" (saved ");
-                    Serial.print(oldLength - optimizedPathLength);
-                    Serial.println(" moves)");
                 }
-                
+                else {
+                    consecutiveNoChange = 0;
+                }
                 iterations++;
             }
             
@@ -494,22 +489,22 @@ void loop() {
                 Serial.println("  (converged - no further improvements)");
             }
             
-            Serial.println("\n╔════════════════════════════════════════╗");
-            Serial.print("║  Final Path: ");
-            Serial.print(optimizedPath);
-            for(int i = optimizedPath.length(); i < 25; i++) Serial.print(" ");
-            Serial.println("║");
-            Serial.print("║  Length: ");
-            Serial.print(optimizedPath.length());
-            Serial.print(" moves");
-            for(int i = String(optimizedPath.length()).length(); i < 20; i++) Serial.print(" ");
-            Serial.println("║");
-            Serial.print("║  Saved: ");
-            Serial.print(rawPath.length() - optimizedPath.length());
-            Serial.print(" moves");
-            for(int i = String(rawPath.length() - optimizedPath.length()).length(); i < 21; i++) Serial.print(" ");
-            Serial.println("║");
-            Serial.println("╚════════════════════════════════════════╝\n");
+            // Serial.println("\n╔════════════════════════════════════════╗");
+            // Serial.print("║  Final Path: ");
+            // Serial.print(optimizedPath);
+            // for(int i = optimizedPath.length(); i < 25; i++) Serial.print(" ");
+            // Serial.println("║");
+            // Serial.print("║  Length: ");
+            // Serial.print(optimizedPath.length());
+            // Serial.print(" moves");
+            // for(int i = String(optimizedPath.length()).length(); i < 20; i++) Serial.print(" ");
+            // Serial.println("║");
+            // Serial.print("║  Saved: ");
+            // Serial.print(rawPath.length() - optimizedPath.length());
+            // Serial.print(" moves");
+            // for(int i = String(rawPath.length() - optimizedPath.length()).length(); i < 21; i++) Serial.print(" ");
+            // Serial.println("║");
+            // Serial.println("╚════════════════════════════════════════╝\n");
             
             if (client && client.connected()) {
                 client.println("\n╔════════════════════════════════════════╗");
@@ -523,9 +518,7 @@ void loop() {
                 client.print(rawPath.length() - optimizedPath.length());
                 client.println(" moves!");
             }
-            
-            Serial.println("✓ Ready for Run 2 (Solving)");
-            Serial.println("Press button or type START\n");
+
             currentState = WAIT_FOR_RUN_2;
             solvePathIndex = 0;
             break;
@@ -577,11 +570,11 @@ void loop() {
                 else {
                     char turn = optimizedPath[solvePathIndex];
                     
-                    Serial.print("Segment ");
-                    Serial.print(solvePathIndex + 1);
-                    Serial.print("/");
-                    Serial.print(optimizedPathLength);
-                    Serial.print(": ");
+                    // Serial.print("Segment ");
+                    // Serial.print(solvePathIndex);
+                    // Serial.print("/");
+                    // Serial.print(optimizedPathLength);
+                    // Serial.print(": ");
                     
                     if (turn == 'L') {
                         Serial.println("LEFT turn");
@@ -610,7 +603,7 @@ void loop() {
             }
             else if (solveState == SOLVE_FAST_RUN) {
                 long currentTicks = motors.getAverageCount();
-                long targetTicks = optimizedSegments[solvePathIndex + 1];
+                long targetTicks = optimizedSegments[solvePathIndex];
                 
                 if (currentTicks < (targetTicks - SLOWDOWN_TICKS)) {
                     runPID(highSpeed);  // GO FAST! 
@@ -621,7 +614,7 @@ void loop() {
             }
             else if (solveState == SOLVE_SLOW_RUN) {
                 long currentTicks = motors.getAverageCount();
-                long targetTicks = optimizedSegments[solvePathIndex + 1];
+                long targetTicks = optimizedSegments[solvePathIndex];
                 
                 if (currentTicks < targetTicks) {
                     runPID(baseSpeed);  // Slow down for accuracy
