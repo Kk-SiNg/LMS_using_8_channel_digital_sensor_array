@@ -207,10 +207,10 @@ bool Sensors::isEndPoint() {
     // Finish square
     for (uint8_t i = 0; i < 8; i++) {
         if (!sensors[i]) {
-            return true;
+            return false;
         }
     }
-    return false;
+    return true;
 }
 
 // ========== UTILITY ==========

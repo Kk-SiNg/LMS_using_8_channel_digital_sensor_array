@@ -37,7 +37,11 @@ float maxIntegral = 1000;  // Prevent integral windup
 int baseSpeed = 150;
 int turnSpeed = 190;
 int maxSpeed = 220;
-int highSpeed = 200;  // For optimized run
+int highSpeed = 200;  // For solving case
+
+//Addition
+int junction_indentification_delay = 20; //move thes many ticks to reverify junction and get available paths
+int line_end_confirmation_ticks = 50;
 
 // Delays
 int delayBeforeCenter = 100;
@@ -286,35 +290,6 @@ void loop() {
                 break;
             }
             
-            // === CRITICAL: Check for Line End FIRST ===
-            if (sensors.isEndPoint()) {
-                if (lineEndStartTime == 0) {
-                    lineEndStartTime = millis();
-                } 
-                else if (millis() - lineEndStartTime > LINE_END_CONFIRM_TIME) {
-                    // Confirmed line end
-                    motors.stopBrake();
-                    robotRunning = false;
-                    
-                    unsigned long mappingTime = (millis() - mappingStartTime) / 1000;
-                    
-                    if (client && client.connected()) {
-                        client.println("\n>>> LINE END DETECTED - Mapping Complete!");
-                        client.print("Time: ");
-                        client.print(mappingTime);
-                        client.println("sec");
-                    }
-                    
-                    currentState = OPTIMIZING;
-                    lineEndStartTime = 0;
-                    break;
-                }
-            }
-            else {
-                // Line detected - reset timer
-                lineEndStartTime = 0;
-            }
-            
             // === Run PID Line Following ===
             runPID(baseSpeed);
             
@@ -349,15 +324,16 @@ void loop() {
                 bool isJunction = (pathCount > 1) || (pathCount == 1 && ! paths.straight);
                 
                 if (isJunction) {
+                    // move for some ticks to get all sensors on junction
+                    motors.moveForward(junction_indentification_delay);
                     motors.stopBrake();
+                    
                     delay(delayBeforeCenter);
 
                     PathOptions paths = sensors.getAvailablePaths();
                     
-                    JunctionType jType = sensors.classifyJunction(paths);
+                    // JunctionType jType = sensors.classifyJunction(paths);
 
-
-                    
                     if (client && client.connected()) {
                         client.printf("J%d: ", junctionCount);
                         if(paths.left) client.print("L");
@@ -388,18 +364,11 @@ void loop() {
                     junctionCount++;
 
                     if (sensors. isEndPoint()) {
-                        // CONFIRMED FINISH!  
+                        // CONFIRMED FINISH!  as it is not possible for all sensors to detect line(as end point can be thought as strips of lines) even ater ticking to center
                         motors.stopBrake();
                         robotRunning = false;
                         
                         unsigned long runTime = (millis() - runStartTime) / 1000;
-                        
-                        Serial.println("\n╔════════════════════════════════════════╗");
-                        Serial.println("║      🏆  MAZE COMPLETE!  🏆            ║");
-                        Serial. println("║   IIT Bombay Mesmerize Complete!        ║");
-                        Serial. println("╚════════════════════════════════════════╝");
-                        Serial.printf("\n⏱  Time: %lu seconds\n", runTime);
-                        Serial.printf("🔀 Junctions: %d\n\n", junctionCount);
                         
                         if (client) {
                             client.println("\n🏆 MAZE COMPLETE!");
@@ -429,7 +398,7 @@ void loop() {
                         rawPath += 'R';
                     }
                     else {
-                        // Dead end - turn back
+                        // line end - turn back
                         if (client && client.connected()) client.println("  → DEAD END - Turning back");
                         motors.turn_180_back();
                         rawPath += 'B';
@@ -449,6 +418,38 @@ void loop() {
                     integral = 0;
                     lastJunctionTime = millis();
                     delay(100);
+                }
+                else if (sensors.isLineEnd()){
+                    
+                    delay(100);
+                    motors.moveForward(line_end_confirmation_ticks);
+                    motors.stopBrake();
+                    delay(100);
+
+                    if(sensors.isLineEnd()){
+                        if (client && client.connected()) client.println("  → DEAD END - Turning back");
+                        junctionCount++;
+
+                        //Save segment
+                        long segmentTicks = motors.getAverageCount();
+                        pathSegments[pathIndex] = segmentTicks - line_end_confirmation_ticks;
+ 
+                        pathIndex++;
+
+                        //turn and save path
+                        motors.turn_180_back();
+                        rawPath += 'B';
+                        
+                        //reset
+                        motors.clearEncoders();
+                        lastError = 0;
+                        integral = 0;
+                        lastJunctionTime = millis();
+                        delay(100);
+                    }
+                    else{
+                        runPID(baseSpeed);
+                    }
                 }
             }
             break;
