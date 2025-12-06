@@ -9,9 +9,9 @@
 // Define global tunable parameters can be changed externally via wifi
 int TICKS_FOR_90_DEG = 300;
 int TICKS_FOR_180_DEG = 600;
-int TICKS_TO_CENTER = 50;
-int BASE_SPEED = 120;
-int TURN_SPEED = 140;
+int TICKS_TO_CENTER = 350;
+int BASE_SPEED = 150;
+int TURN_SPEED = 180;
 int MAX_SPEED = 200;
 
 Motors::Motors() {}
