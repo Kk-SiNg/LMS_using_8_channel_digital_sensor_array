@@ -34,10 +34,11 @@ float lastError = 0;
 float integral = 0;
 float maxIntegral = 1000;  // Prevent integral windup
 
-int baseSpeed = 150;
-int turnSpeed = 190;
-int maxSpeed = 220;
 int highSpeed = 200;  // For optimized run
+
+// Delays
+int delayBeforeCenter = 100;
+int delayAfterCenter = 100;
 
 // === Junction Settings ===
 unsigned long junctionDebounce = 500;  // ms between junction detections
@@ -143,7 +144,7 @@ void setup() {
     Serial.println("║  Configuration                         ║");
     Serial.println("╠════════════════════════════════════════╣");
     Serial.printf("║  PID: Kp=%.1f Ki=%.1f Kd=%.1f          ║\n", Kp, Ki, Kd);
-    Serial.printf("║  Base Speed: %d  High Speed: %d      ║\n", baseSpeed, highSpeed);
+    Serial.printf("║  Base Speed: %d  High Speed: %d      ║\n", BASE_SPEED, highSpeed);
     Serial.printf("║  Junction Debounce: %lums              ║\n", junctionDebounce);
     Serial.printf("║  TICKS_90° = %d  Center = %d         ║\n", TICKS_FOR_90_DEG, TICKS_TO_CENTER);
     Serial.println("╚════════════════════════════════════════╝\n");
@@ -159,10 +160,10 @@ unsigned long getDynamicDebounce() {
     // Faster speed = SHORTER debounce (robot crosses junction quickly)
     
     // Prevent division by zero
-    if (baseSpeed == 0) return junctionDebounce;
+    if (BASE_SPEED == 0) return junctionDebounce;
     
     // Inverted ratio: BASE_SPEED / currentSpeed
-    float speedRatio = (float)BASE_SPEED / (float)baseSpeed;
+    float speedRatio = (float)BASE_SPEED / (float)BASE_SPEED;
     unsigned long dynamicValue = (unsigned long)(junctionDebounce * speedRatio);
     
     // Clamp to reasonable range
@@ -186,7 +187,7 @@ void loop() {
             
             unsigned long dynDebounce = getDynamicDebounce();
             client.printf("] Err:%.1f Spd:%d DB:%lums | ", 
-                         sensors.getLineError(), baseSpeed, dynDebounce);
+                         sensors.getLineError(), BASE_SPEED, dynDebounce);
             
             switch(currentState) {
                 case WAIT_FOR_RUN_1: client.print("WAIT_RUN1"); break;
@@ -312,7 +313,7 @@ void loop() {
             }
             
             // === Run PID Line Following ===
-            runPID(baseSpeed);
+            runPID(BASE_SPEED);
             
             // === Detailed Debug Output (every 1s) ===
             if (millis() - lastDebugPrint > 1000) {
@@ -324,7 +325,7 @@ void loop() {
                     client.print(sensorVals[i] ? "█" : "·");
                 }
                 client.printf("] Err:%.1f Speed:%d Path:%s DynDB:%lums\n", 
-                             sensors.getLineError(), baseSpeed, rawPath.c_str(), getDynamicDebounce());
+                             sensors.getLineError(), BASE_SPEED, rawPath.c_str(), getDynamicDebounce());
                 
                 lastDebugPrint = millis();
             }
@@ -346,8 +347,13 @@ void loop() {
                 
                 if (isJunction) {
                     motors.stopBrake();
+                    delay(delayBeforeCenter);
+
+                    PathOptions paths = sensors.getAvailablePaths();
                     
                     JunctionType jType = sensors.classifyJunction(paths);
+
+
                     
                     if (client && client.connected()) {
                         client.printf("J%d: ", junctionCount);
@@ -359,6 +365,7 @@ void loop() {
                     
                     // STEP 1: Move to center FIRST (part of segment)
                     motors.moveForward(TICKS_TO_CENTER);
+                    delay(delayAfterCenter);
 
                     // STEP 2: Read complete segment (including center move)
                     long segmentTicks = motors.getAverageCount();
@@ -377,6 +384,29 @@ void loop() {
                     }
                     
                     junctionCount++;
+
+                    if (sensors. isEndPoint()) {
+                        // CONFIRMED FINISH!  
+                        motors.stopBrake();
+                        robotRunning = false;
+                        
+                        unsigned long runTime = (millis() - runStartTime) / 1000;
+                        
+                        Serial.println("\n╔════════════════════════════════════════╗");
+                        Serial.println("║      🏆  MAZE COMPLETE!  🏆            ║");
+                        Serial. println("║   IIT Bombay Mesmerize Complete!        ║");
+                        Serial. println("╚════════════════════════════════════════╝");
+                        Serial.printf("\n⏱  Time: %lu seconds\n", runTime);
+                        Serial.printf("🔀 Junctions: %d\n\n", junctionCount);
+                        
+                        if (client) {
+                            client.println("\n🏆 MAZE COMPLETE!");
+                            client.printf("Time: %lus | Junctions: %d\n", runTime, junctionCount);
+                        }
+                        
+                        currentState = FINISHED;
+                        break;
+                    }
 
                     bool sensorVals[8];
                     sensors.getSensorArray(sensorVals);
@@ -624,7 +654,7 @@ void loop() {
                 long targetTicks = optimizedSegments[solvePathIndex + 1];
                 
                 if (currentTicks < targetTicks) {
-                    runPID(baseSpeed);  // Slow down for accuracy
+                    runPID(BASE_SPEED);  // Slow down for accuracy
                 }
                 else {
                     motors.stopBrake();
@@ -634,7 +664,7 @@ void loop() {
                 }
             }
             else if (solveState == SOLVE_FINAL_RUN) {
-                runPID(baseSpeed);
+                runPID(BASE_SPEED);
                 
                 // Check for finish (line end)
                 if (sensors.isEndPoint()) {
@@ -711,8 +741,8 @@ void runPID(int speed) {
     int rightSpeed = speed + (int)correction;
     
     // Constrain motor speeds
-    leftSpeed = constrain(leftSpeed, -maxSpeed, maxSpeed);
-    rightSpeed = constrain(rightSpeed, -maxSpeed, maxSpeed);
+    leftSpeed = constrain(leftSpeed, -MAX_SPEED, MAX_SPEED);
+    rightSpeed = constrain(rightSpeed, -MAX_SPEED, MAX_SPEED);
     
     motors.setSpeeds(leftSpeed, rightSpeed);
     
@@ -831,7 +861,7 @@ void processCommand(String cmd) {
     else if (cmd == "DEBOUNCE") {
         client.println("\n=== Debounce Info ===");
         client.printf("Base Debounce: %lums\n", junctionDebounce);
-        client.printf("Current Speed: %d\n", baseSpeed);
+        client.printf("Current Speed: %d\n", BASE_SPEED);
         client.printf("Dynamic Debounce: %lums\n", getDynamicDebounce());
         client.println("Logic: Slower=Longer, Faster=Shorter");
         client.println("=====================\n");
@@ -870,13 +900,13 @@ void processCommand(String cmd) {
     
     // === SPEED TUNING ===
     else if (cmd.startsWith("SPEED ")) {
-        baseSpeed = cmd.substring(6).toInt();
-        baseSpeed = constrain(baseSpeed, 50, maxSpeed);
+        int baseSpeed = cmd.substring(6).toInt();
+        Motors::updateSpeeds(baseSpeed, TURN_SPEED, MAX_SPEED);
         client.printf("✓ Base Speed = %d (Dynamic DB now: %lums)\n", baseSpeed, getDynamicDebounce());
     }
     else if (cmd.startsWith("HIGHSPEED ")) {
         highSpeed = cmd.substring(10).toInt();
-        highSpeed = constrain(highSpeed, 50, maxSpeed);
+        Motors::updateSpeeds(BASE_SPEED, TURN_SPEED, MAX_SPEED);
         client.printf("✓ High Speed = %d\n", highSpeed);
     }
     else if (cmd.startsWith("JUNCTIONDB ")) {
@@ -979,7 +1009,7 @@ void printStatus() {
         default: client.println("CALIBRATING");
     }
     client.printf("PID: Kp=%.1f Ki=%.2f Kd=%.1f\n", Kp, Ki, Kd);
-    client.printf("Speed: Base=%d High=%d\n", baseSpeed, highSpeed);
+    client.printf("Speed: Base=%d High=%d\n", BASE_SPEED, highSpeed);
     client.printf("Junction Debounce: Base=%lums Dynamic=%lums\n", 
                  junctionDebounce, getDynamicDebounce());
     client.printf("Motor Ticks: Center=%d Turn90=%d\n", TICKS_TO_CENTER, TICKS_FOR_90_DEG);
