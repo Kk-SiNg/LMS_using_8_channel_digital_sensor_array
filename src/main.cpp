@@ -402,7 +402,7 @@ void loop() {
                         if (client && client.connected()) client.println("  → DEAD END - Turning back");
                         motors.turn_180_back();
                         rawPath += 'B';
-                        pathSegments[pathIndex] = -1*(segmentTicks)*2;
+                        pathSegments[pathIndex] = segmentTicks;
                     }
                     
                     pathIndex++;
@@ -433,7 +433,7 @@ void loop() {
 
                         //Save segment
                         long segmentTicks = motors.getAverageCount();
-                        pathSegments[pathIndex] = -1*(segmentTicks - line_end_confirmation_ticks);
+                        pathSegments[pathIndex] = segmentTicks - line_end_confirmation_ticks;
  
                         pathIndex++;
 

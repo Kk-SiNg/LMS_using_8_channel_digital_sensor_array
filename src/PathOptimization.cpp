@@ -22,12 +22,11 @@ void PathOptimization::optimize(String &path, long segments[], int &pathLength) 
             String sub = path.substring(i, i + 3);
             
             // Sum the distances of the 3 segments being combined
-            long combinedDist = segments[i] + segments[i+1] + segments[i+2];
             
             if (sub == "LBR") {
                 // Left + Back + Right = U-turn (Back)
                 newPath += 'B';
-                newSegments[newIndex] = combinedDist;
+                newSegments[newIndex] = segments[i+2];
                 i += 3;
                 newIndex++;
                 continue;
@@ -35,7 +34,7 @@ void PathOptimization::optimize(String &path, long segments[], int &pathLength) 
             else if (sub == "LBS") {
                 // Left + Back + Straight = Right turn
                 newPath += 'R';
-                newSegments[newIndex] = combinedDist;
+                newSegments[newIndex] = segments[i+2];
                 i += 3;
                 newIndex++;
                 continue;
@@ -43,7 +42,7 @@ void PathOptimization::optimize(String &path, long segments[], int &pathLength) 
             else if (sub == "RBL") {
                 // Right + Back + Left = U-turn (Back)
                 newPath += 'B';
-                newSegments[newIndex] = combinedDist;
+                newSegments[newIndex] = segments[i+2];
                 i += 3;
                 newIndex++;
                 continue;
@@ -51,7 +50,7 @@ void PathOptimization::optimize(String &path, long segments[], int &pathLength) 
             else if (sub == "SBL") {
                 // Straight + Back + Left = Right turn
                 newPath += 'R';
-                newSegments[newIndex] = combinedDist;
+                newSegments[newIndex] = segments[i+2];
                 i += 3;
                 newIndex++;
                 continue;
@@ -59,7 +58,7 @@ void PathOptimization::optimize(String &path, long segments[], int &pathLength) 
             else if (sub == "SBS") {
                 // Straight + Back + Straight = U-turn
                 newPath += 'B';
-                newSegments[newIndex] = combinedDist;
+                newSegments[newIndex] = segments[i+2];
                 i += 3;
                 newIndex++;
                 continue;
@@ -67,7 +66,7 @@ void PathOptimization::optimize(String &path, long segments[], int &pathLength) 
             else if (sub == "LBL") {
                 // Left + Back + Left = Straight (180° + 180° cancel out)
                 newPath += 'S';
-                newSegments[newIndex] = combinedDist;
+                newSegments[newIndex] = segments[i+2];
                 i += 3;
                 newIndex++;
                 continue;
@@ -75,7 +74,7 @@ void PathOptimization::optimize(String &path, long segments[], int &pathLength) 
             else if (sub == "RBR") {
                 // Right + Back + Right = Straight
                 newPath += 'S';
-                newSegments[newIndex] = combinedDist;
+                newSegments[newIndex] = segments[i+2];
                 i += 3;
                 newIndex++;
                 continue;
@@ -83,7 +82,7 @@ void PathOptimization::optimize(String &path, long segments[], int &pathLength) 
             else if (sub == "SBR") {
                 // Straight + Back + Right = Left
                 newPath += 'L';
-                newSegments[newIndex] = combinedDist;
+                newSegments[newIndex] = segments[i+2];
                 i += 3;
                 newIndex++;
                 continue;
@@ -91,7 +90,7 @@ void PathOptimization::optimize(String &path, long segments[], int &pathLength) 
             else if (sub == "RBS") {
                 // Right + Back + Straight = Left
                 newPath += 'L';
-                newSegments[newIndex] = combinedDist;
+                newSegments[newIndex] = segments[i+2];
                 i += 3;
                 newIndex++;
                 continue;
