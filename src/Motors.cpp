@@ -7,10 +7,10 @@
 #include <Arduino.h>
 
 // Define global tunable parameters can be changed externally via wifi
-int TICKS_FOR_90_DEG = 570;
+int TICKS_FOR_90_DEG = 300;
 int TICKS_FOR_180_DEG = 600;
 int TICKS_TO_CENTER = 340;
-int BASE_SPEED = 180;
+int BASE_SPEED = 150;
 int TURN_SPEED = 150;
 int MAX_SPEED = 200;
 

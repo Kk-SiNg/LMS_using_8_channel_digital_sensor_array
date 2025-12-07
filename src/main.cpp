@@ -34,7 +34,7 @@ float lastError = 0;
 float integral = 0;
 float maxIntegral = 1000;  // Prevent integral windup
 
-int baseSpeed = 180;
+int baseSpeed = 130;
 int turnSpeed = 190;
 int maxSpeed = 250;
 int highSpeed = 200;  // For solving case
@@ -240,8 +240,8 @@ void loop() {
         buttonPressStart = 0;
     }
 
-    // === Detailed Debug Output (every 1s) ===
-    if (millis() - lastDebugPrint > 1000) {
+    // === Detailed Debug Output (every 100ms) ===
+    if (millis() - lastDebugPrint > 100) {
         bool sensorVals[8];
         sensors.getSensorArray(sensorVals);
         
@@ -438,7 +438,7 @@ void loop() {
 
                         //Record and Save segment for backing up
                         long segmentTicks = motors.getAverageCount();
-                        pathSegments[pathIndex] = segmentTicks - line_end_confirmation_ticks;
+                        pathSegments[pathIndex] = segmentTicks;
  
                         pathIndex++;
 
@@ -950,13 +950,13 @@ void processCommand(String cmd) {
 
 
     //addition for delays
-    else if (cmd.startsWith("dbc ")){
+    else if (cmd.startsWith("DBC ")){
         int dl = cmd.substring(4).toInt(); 
         delayBeforeCenter = dl;
         client.printf("delay before center: %d", dl);
         client.println();
     }
-    else if (cmd.startsWith("dac ")){
+    else if (cmd.startsWith("DAC ")){
         int dl = cmd.substring(4).toInt(); 
         delayBeforeCenter = dl;
         client.printf("delay after center: %d", dl);
