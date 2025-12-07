@@ -260,7 +260,7 @@ void loop() {
                     currentState = MAPPING;
                     robotRunning = true;
                     pathIndex = 0;
-                    rawPath = "";
+                    rawPath = "S";
                     // totalSegmentTicks = 0;
                     junctionCount = 0;
                     lastJunctionTime = 0;
@@ -321,7 +321,7 @@ void loop() {
                 if (paths.straight) pathCount++;
                 
                 // Is this a junction?  (more than just straight OR only left/right)
-                bool isJunction = (pathCount > 1) || (pathCount == 1 && ! paths.straight);
+                bool isJunction = (pathCount > 1) || (pathCount == 1 && !paths.straight);
                 
                 if (isJunction) {
                     // move for some ticks to get all sensors on junction
@@ -363,8 +363,8 @@ void loop() {
                     
                     junctionCount++;
 
-                    if (sensors. isEndPoint()) {
-                        // CONFIRMED FINISH!  as it is not possible for all sensors to detect line(as end point can be thought as strips of lines) even ater ticking to center
+                    if (sensors.isEndPoint()) {
+                        // CONFIRMED FINISH! as it is not possible for all sensors to detect line(as end point can be thought as strips of lines) even ater ticking to center
                         motors.stopBrake();
                         robotRunning = false;
                         
@@ -542,7 +542,7 @@ void loop() {
             
             if (client && client.connected()) {
                 client.println("\n╔════════════════════════════════════════╗");
-                client.println("║      PATH OPTIMIZED!                    ║");
+                client.println("║      PATH OPTIMIZED!                   ║");
                 client.println("╚════════════════════════════════════════╝");
                 client.print("Raw: ");
                 client.println(rawPath);
@@ -590,9 +590,14 @@ void loop() {
         
         case SOLVING:
         {
-            if (! robotRunning) {
+            if (!robotRunning) {
                 motors.stopBrake();
                 break;
+            }
+            if (optimizedPath.isEmpty() || optimizedPathLength == 0) {
+                Serial.println("ERROR: Missing optimized path!");
+                currentState = FINISHED;
+                return;
             }
             
             if (solveState == SOLVE_TURN) {
@@ -611,15 +616,15 @@ void loop() {
                     // Serial.print(": ");
                     
                     if (turn == 'L') {
-                        Serial.println("LEFT turn");
+                        if (client && client.connected()) if (client && client.connected()) client.println("LEFT turn");
                         motors.turn_90_left();
                     }
                     else if (turn == 'R') {
-                        Serial.println("RIGHT turn");
+                        if (client && client.connected()) client.println("RIGHT turn");
                         motors.turn_90_right();
                     }
                     else {
-                        Serial.println("STRAIGHT");
+                        if (client && client.connected()) client.println("STRAIGHT");
                         // No turn needed for 'S'
                     }
                     
@@ -640,7 +645,7 @@ void loop() {
                 long targetTicks = optimizedSegments[solvePathIndex];
                 
                 if (currentTicks < (targetTicks - SLOWDOWN_TICKS)) {
-                    runPID(highSpeed);  // GO FAST! 
+                    runPID(highSpeed);  // GO FAST!
                 }
                 else {
                     solveState = SOLVE_SLOW_RUN;
@@ -670,23 +675,9 @@ void loop() {
                     
                     unsigned long solvingTime = (millis() - solvingStartTime) / 1000;
                     
-                    Serial.println("\n╔════════════════════════════════════════╗");
-                    Serial.println("║                                        ║");
-                    Serial.println("║      🏆  MAZE SOLVED!  🏆              ║");
-                    Serial.println("║                                        ║");
-                    Serial.println("║   IIT Bombay Mesmerize Complete!       ║");
-                    Serial.println("║                                        ║");
-                    Serial.println("╚════════════════════════════════════════╝");
-                    Serial.print("\nSolving time: ");
-                    Serial.print(solvingTime);
-                    Serial.println(" seconds");
-                    Serial.print("Optimized path length: ");
-                    Serial.print(optimizedPath.length());
-                    Serial.println(" moves\n");
-                    
                     if (client && client.connected()) {
                         client.println("\n╔════════════════════════════════════════╗");
-                        client.println("║      🏆  MAZE SOLVED!   🏆              ║");
+                        client.println("║      🏆  MAZE SOLVED!  🏆              ║");
                         client.println("╚════════════════════════════════════════╝");
                         client.print("Time: ");
                         client.print(solvingTime);
@@ -702,8 +693,15 @@ void loop() {
         case FINISHED:
         {
             // Victory blink
-            digitalWrite(ONBOARD_LED, ! digitalRead(ONBOARD_LED));
-            delay(200);
+            int i = 0;
+            while(i < 200){
+            digitalWrite(ONBOARD_LED, !digitalRead(ONBOARD_LED));
+            delay(30);
+            digitalWrite(ONBOARD_LED, !digitalRead(ONBOARD_LED));
+            delay(20);
+            i+=50;
+            }
+
             break;
         }
         
@@ -786,7 +784,7 @@ void setupWiFi() {
 }
 
 void handleWiFiClient() {
-    if (! client || !client.connected()) {
+    if (!client || !client.connected()) {
         client = server.available();
         if (client) {
             Serial.println("WiFi client connected");
@@ -966,7 +964,7 @@ void processCommand(String cmd) {
         client.println("==================\n");
     }
     else {
-        client.println("❌ Unknown. Type HELP");
+        client.println("❌ Unknown.Type HELP");
     }
 }
 
