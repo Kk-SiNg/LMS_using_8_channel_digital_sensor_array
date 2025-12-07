@@ -36,11 +36,11 @@ float maxIntegral = 1000;  // Prevent integral windup
 
 int baseSpeed = 180;
 int turnSpeed = 190;
-int maxSpeed = 220;
+int maxSpeed = 250;
 int highSpeed = 200;  // For solving case
 
 //Addition
-int junction_indentification_delay = 20; //move thes many ticks to reverify junction and get available paths
+int junction_indentification_delay = 20; //move these many ticks to reverify junction and get available paths
 int line_end_confirmation_ticks = 50;
 
 // Delays
@@ -239,6 +239,22 @@ void loop() {
     else {
         buttonPressStart = 0;
     }
+
+    // === Detailed Debug Output (every 1s) ===
+    if (millis() - lastDebugPrint > 1000) {
+        bool sensorVals[8];
+        sensors.getSensorArray(sensorVals);
+        
+        client.print("Sensor: [");
+        for(int i = 0; i < 8; i++) {
+            client.print(sensorVals[i] ? "█" : "·");
+        }
+        client.printf("] Err:%.1f Speed:%d Path:%s DynDB:%lums\n", 
+                        sensors.getLineError(), baseSpeed, rawPath.c_str(), getDynamicDebounce());
+        client.println();
+        
+        lastDebugPrint = millis();
+    }
     
     // === Main State Machine ===
     switch (currentState) {
@@ -293,20 +309,7 @@ void loop() {
             // === Run PID Line Following ===
             runPID(baseSpeed);
             
-            // === Detailed Debug Output (every 1s) ===
-            if (millis() - lastDebugPrint > 1000) {
-                bool sensorVals[8];
-                sensors.getSensorArray(sensorVals);
-                
-                client.print("Sensors: [");
-                for(int i = 0; i < 8; i++) {
-                    client.print(sensorVals[i] ? "█" : "·");
-                }
-                client.printf("] Err:%.1f Speed:%d Path:%s DynDB:%lums\n", 
-                             sensors.getLineError(), baseSpeed, rawPath.c_str(), getDynamicDebounce());
-                
-                lastDebugPrint = millis();
-            }
+            
             
             // === Junction Detection (with dynamic debounce) ===
             unsigned long currentDebounce = getDynamicDebounce();
@@ -371,11 +374,11 @@ void loop() {
                         unsigned long runTime = (millis() - runStartTime) / 1000;
                         
                         if (client) {
-                            client.println("\n🏆 MAZE COMPLETE!");
+                            client.println("\n🏆 DRY RUN COMPLETE!");
                             client.printf("Time: %lus | Junctions: %d\n", runTime, junctionCount);
                         }
                         
-                        currentState = FINISHED;
+                        currentState = OPTIMIZING;
                         break;
                     }
 
@@ -402,7 +405,6 @@ void loop() {
                         if (client && client.connected()) client.println("  → DEAD END - Turning back");
                         motors.turn_180_back();
                         rawPath += 'B';
-                        pathSegments[pathIndex] = segmentTicks;
                     }
                     
                     pathIndex++;
@@ -431,7 +433,10 @@ void loop() {
                         if (client && client.connected()) client.println("  → DEAD END - Turning back");
                         junctionCount++;
 
-                        //Save segment
+                        //MOVE TO CENTER
+                        motors.moveForward(TICKS_TO_CENTER - line_end_confirmation_ticks);
+
+                        //Record and Save segment for backing up
                         long segmentTicks = motors.getAverageCount();
                         pathSegments[pathIndex] = segmentTicks - line_end_confirmation_ticks;
  
@@ -935,6 +940,27 @@ void processCommand(String cmd) {
             client.printf("✓ Motors: Center=%d Turn90=%d\n", centerTicks, turn90Ticks);
             Serial.printf("WiFi: Motors: Center=%d Turn90=%d\n", centerTicks, turn90Ticks);
         }
+    }
+    //addition for turning speed controll
+    else if (cmd.startsWith("TS ")) {
+        int speed = cmd.substring(3).toInt();
+        Motors::updateSpeeds(140, speed, 200);
+        client.printf("✓ Turn 90° Ticks = %d\n", speed);
+    }
+
+
+    //addition for delays
+    else if (cmd.startsWith("dbc ")){
+        int dl = cmd.substring(4).toInt(); 
+        delayBeforeCenter = dl;
+        client.printf("delay before center: %d", dl);
+        client.println();
+    }
+    else if (cmd.startsWith("dac ")){
+        int dl = cmd.substring(4).toInt(); 
+        delayBeforeCenter = dl;
+        client.printf("delay after center: %d", dl);
+        client.println();
     }
     
     // === TESTING ===
