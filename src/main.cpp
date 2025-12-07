@@ -315,16 +315,16 @@ void loop() {
             unsigned long currentDebounce = getDynamicDebounce();
             
             if (millis() - lastJunctionTime > currentDebounce) {
-                PathOptions paths = sensors.getAvailablePaths();
+                PathOptions pathsA = sensors.getAvailablePaths();
                 
-                // Count available paths
+                // Count available pathsA
                 int pathCount = 0;
-                if (paths.left) pathCount++;
-                if (paths.right) pathCount++;
-                if (paths.straight) pathCount++;
+                if (pathsA.left) pathCount++;
+                if (pathsA.right) pathCount++;
+                if (pathsA.straight) pathCount++;
                 
                 // Is this a junction?  (more than just straight OR only left/right)
-                bool isJunction = (pathCount > 1) || (pathCount == 1 && !paths.straight);
+                bool isJunction = (pathCount > 1) || (pathCount == 1 && !pathsA.straight);
                 
                 if (isJunction) {
                     // move for some ticks to get all sensors on junction
@@ -333,8 +333,14 @@ void loop() {
                     
                     delay(delayBeforeCenter);
 
-                    PathOptions paths = sensors.getAvailablePaths();
+                    PathOptions pathsB = sensors.getAvailablePaths();
                     
+                    //get accurate path
+                    PathOptions paths;
+                    paths.left = pathsA.left || pathsB.left;
+                    paths.right = pathsA.right || pathsB.right;
+                    paths.straight = pathsA.straight || pathsB.straight;
+
                     // JunctionType jType = sensors.classifyJunction(paths);
 
                     if (client && client.connected()) {
@@ -666,7 +672,6 @@ void loop() {
                 }
                 else {
                     motors.stopBrake();
-                    motors.moveForward(TICKS_TO_CENTER);
                     solvePathIndex++;
                     solveState = SOLVE_TURN;
                 }
@@ -958,7 +963,7 @@ void processCommand(String cmd) {
     }
     else if (cmd.startsWith("DAC ")){
         int dl = cmd.substring(4).toInt(); 
-        delayBeforeCenter = dl;
+        delayAfterCenter = dl;
         client.printf("delay after center: %d", dl);
         client.println();
     }
