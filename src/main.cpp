@@ -34,7 +34,7 @@ float lastError = 0;
 float integral = 0;
 float maxIntegral = 1000;  // Prevent integral windup
 
-int baseSpeed = 150;
+int baseSpeed = 180;
 int turnSpeed = 190;
 int maxSpeed = 220;
 int highSpeed = 200;  // For solving case
