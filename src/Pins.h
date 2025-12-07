@@ -18,11 +18,11 @@
 
 const uint8_t SensorCount = 8;
 
-// All sensors are digital in this mode
-const bool isAnalogPin[SensorCount] = {
-    false, false, false, false,
-    false, false, false, false
-};
+// // All sensors are digital in this mode
+// const bool isAnalogPin[SensorCount] = {
+//     false, false, false, false,
+//     false, false, false, false
+// };
 
 // Digital mode settings
 #define LINE_THRESHOLD 1              // Digital: 1 = line detected
