@@ -34,27 +34,27 @@ void Sensors::printCalibration() {
 // Read all 8 sensors as digital
 // INVERTED: 0 = white line, 1 = black surface
 void Sensors::readRaw(uint16_t* values) {
-    values[0] = digitalRead(SENSOR_PIN_1);  // Right outer
-    values[1] = digitalRead(SENSOR_PIN_2);
-    values[2] = digitalRead(SENSOR_PIN_3);
-    values[3] = digitalRead(SENSOR_PIN_4);  // Center right
-    values[4] = digitalRead(SENSOR_PIN_5);  // Center left
-    values[5] = digitalRead(SENSOR_PIN_6);
-    values[6] = digitalRead(SENSOR_PIN_7);
-    values[7] = digitalRead(SENSOR_PIN_8);  // Left outer
+    values[0] = !digitalRead(SENSOR_PIN_1);  // Right outer
+    values[1] = !digitalRead(SENSOR_PIN_2);
+    values[2] = !digitalRead(SENSOR_PIN_3);
+    values[3] = !digitalRead(SENSOR_PIN_4);  // Center right
+    values[4] = !digitalRead(SENSOR_PIN_5);  // Center left
+    values[5] = !digitalRead(SENSOR_PIN_6);
+    values[6] = !digitalRead(SENSOR_PIN_7);
+    values[7] = !digitalRead(SENSOR_PIN_8);  // Left outer
 }
 
 void Sensors::readDigital(bool* values) {
     // INVERTED: !  to flip logic
     // We want: true = white line detected
-    values[0] = digitalRead(SENSOR_PIN_1);  // Invert! 
-    values[1] = digitalRead(SENSOR_PIN_2);
-    values[2] = digitalRead(SENSOR_PIN_3);
-    values[3] = digitalRead(SENSOR_PIN_4);
-    values[4] = digitalRead(SENSOR_PIN_5);
-    values[5] = digitalRead(SENSOR_PIN_6);
-    values[6] = digitalRead(SENSOR_PIN_7);
-    values[7] = digitalRead(SENSOR_PIN_8);
+    values[0] = !digitalRead(SENSOR_PIN_1);  // Invert! 
+    values[1] = !digitalRead(SENSOR_PIN_2);
+    values[2] = !digitalRead(SENSOR_PIN_3);
+    values[3] = !digitalRead(SENSOR_PIN_4);
+    values[4] = !digitalRead(SENSOR_PIN_5);
+    values[5] = !digitalRead(SENSOR_PIN_6);
+    values[6] = !digitalRead(SENSOR_PIN_7);
+    values[7] = !digitalRead(SENSOR_PIN_8);
 }
 
 // ========== SIMPLE DIGITAL POSITION CALCULATION ==========
