@@ -182,7 +182,7 @@ void loop() {
     handleWiFiClient();
     
     // === Enhanced WiFi Telemetry (every 500ms) ===
-    if (millis() - lastWiFiUpdate > 500 && client && client.connected()) {
+    if (millis() - lastWiFiUpdate > 1000 && client && client.connected()) {
         if (client.availableForWrite() > 100) {
             bool sensorVals[8];
             sensors.getSensorArray(sensorVals);
@@ -241,7 +241,7 @@ void loop() {
     }
 
     // === Detailed Debug Output (every 100ms) ===
-    if (millis() - lastDebugPrint > 100) {
+    if (millis() - lastDebugPrint > 1000) {
         bool sensorVals[8];
         sensors.getSensorArray(sensorVals);
         
@@ -333,7 +333,7 @@ void loop() {
                     // move for some ticks to get all sensors on junction
                     motors.stopBrake();
                     client.println("junction detected for 1st time\n");
-                    delay(1000);
+                    // delay(1000);
 
                     client.println("moving forward by junction_identification_delay");
 
