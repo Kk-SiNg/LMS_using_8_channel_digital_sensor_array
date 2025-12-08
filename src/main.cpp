@@ -547,6 +547,7 @@ void loop() {
                     consecutiveNoChange = 0;
                 }
                 iterations++;
+                delay(1);
             }
             
             Serial.print("\n✓ Optimization complete after ");
