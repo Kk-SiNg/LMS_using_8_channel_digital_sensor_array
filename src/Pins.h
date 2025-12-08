@@ -52,6 +52,6 @@ const uint8_t SensorCount = 8;
 // Defined in Motors.cpp
 
 // === WIFI CONFIGURATION ===
-#define SSID "Redmi A2"
-#define PASSWORD "kvsandkks"
+#define SSID "Curio's OnePlus 13R"
+#define PASSWORD "awwwwwww"
 #define TELNET_PORT 23

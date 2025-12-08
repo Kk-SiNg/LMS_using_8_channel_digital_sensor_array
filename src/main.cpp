@@ -27,9 +27,9 @@ Motors motors;
 PathOptimization optimizer;
 
 // === Simple PID Variables ===
-float Kp = 30.0;   // Proportional gain
-float Ki = 0.0;    // Integral gain (start with 0)
-float Kd = 15.0;   // Derivative gain
+float Kp = 45.0;   // Proportional gain
+float Ki = 0.05;    // Integral gain (start with 0)
+float Kd = 20.0;   // Derivative gain
 float lastError = 0;
 float integral = 0;
 float maxIntegral = 1000;  // Prevent integral windup
@@ -170,7 +170,7 @@ unsigned long getDynamicDebounce() {
     if (baseSpeed == 0) return junctionDebounce;
     
     // Inverted ratio: BASE_SPEED / currentSpeed
-    float speedRatio = (float)maxSpeed / (float)baseSpeed;
+    float speedRatio = (float)(maxSpeed-50) / (float)baseSpeed;
     unsigned long dynamicValue = (unsigned long)(junctionDebounce * speedRatio);
     
     // Clamp to reasonable range
@@ -326,7 +326,8 @@ void loop() {
                 // Is this a junction?  (more than just straight OR only left/right)
                 bool isJunction = (pathCount > 1) || (pathCount == 1 && !pathsA.straight);
 
-                client.printf("leftA: %d, rightA: \n", pathsA.left, pathsA.right);
+                client.printf("leftA: %d, rightA: %d \n", pathsA.left, pathsA.right);
+                client.println();
                 
                 if (isJunction) {
                     // move for some ticks to get all sensors on junction
@@ -346,6 +347,7 @@ void loop() {
 
                     PathOptions pathsB = sensors.getAvailablePaths();
                     client.printf("leftB: %d, rightB: %d \n", pathsB.left, pathsB.right);
+                    client.println();
 
                     //get accurate path
                     PathOptions paths;
@@ -354,11 +356,13 @@ void loop() {
                     paths.straight = pathsA.straight || pathsB.straight;
 
                     client.printf("left: %d, right: %d \n", paths.left, paths.right);
+                    client.println();
 
                     // JunctionType jType = sensors.classifyJunction(paths);
 
                     if (client && client.connected()) {
                         client.printf("J%d: ", junctionCount);
+                        client.println();
                         if(paths.left) client.print("L");
                         if(paths.straight) client.print("S");
                         if(paths.right) client.print("R");
@@ -372,6 +376,7 @@ void loop() {
                     delay(delayAfterCenter);
 
                     client.printf("segment length covered is: %d\n", segmentTicks + TICKS_TO_CENTER);
+                    client.println();
 
                     // STEP 3: Save segment
                     pathSegments[pathIndex] = segmentTicks + TICKS_TO_CENTER;
@@ -397,6 +402,7 @@ void loop() {
                         if (client) {
                             client.println("\n🏆 DRY RUN COMPLETE!");
                             client.printf("Time: %lus | Junctions: %d\n", runTime, junctionCount);
+                            client.println();
                         }
                         
                         currentState = OPTIMIZING;
