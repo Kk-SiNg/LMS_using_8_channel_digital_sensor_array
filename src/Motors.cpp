@@ -136,9 +136,12 @@ void Motors::clearEncoders() {
     rightEncoder.clearCount();
 }
 
-void Motors::updateTurnTicks(int ticks90) {
-    TICKS_FOR_90_DEG = constrain(ticks90, 50, 2000);
-    TICKS_FOR_180_DEG = TICKS_FOR_90_DEG * 2;
+void Motors::updateTurn_90_Ticks(int ticks90) {
+    TICKS_FOR_90_DEG = constrain(ticks90, 50, 1000);
+}
+
+void Motors::updateTurn_180_Ticks(int ticks180) {
+    TICKS_FOR_180_DEG = constrain(ticks180, 100, 2000);
 }
 
 void Motors::updateCenterTicks(int ticks) {

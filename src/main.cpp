@@ -886,7 +886,9 @@ void processCommand(String cmd) {
         }
         client.println("=================\n");
     }
-    else if (cmd == "DEBOUNCE") {
+    else if (cmd == "DEBOUNCE ") {
+        int deb = cmd.substring(9).toFloat();
+        junctionDebounce = deb;
         client.println("\n=== Debounce Info ===");
         client.printf("Base Debounce: %lums\n", junctionDebounce);
         client.printf("Current Speed: %d\n", baseSpeed);
@@ -953,9 +955,8 @@ void processCommand(String cmd) {
     }
     else if (cmd.startsWith("TURN90 ")) {
         int ticks = cmd.substring(7).toInt();
-        Motors::updateTurnTicks(ticks);
+        Motors::updateTurn_90_Ticks(ticks);
         client.printf("✓ Turn 90° Ticks = %d\n", ticks);
-        Serial.printf("WiFi: Turn 90° Ticks = %d\n", ticks);
     }
     else if (cmd.startsWith("MOTORS ")) {
         int s1 = cmd.indexOf(' ', 7);
@@ -963,12 +964,17 @@ void processCommand(String cmd) {
             int centerTicks = cmd.substring(7, s1).toInt();
             int turn90Ticks = cmd.substring(s1 + 1).toInt();
             Motors::updateCenterTicks(centerTicks);
-            Motors::updateTurnTicks(turn90Ticks);
+            Motors::updateTurn_90_Ticks(turn90Ticks);
             client.printf("✓ Motors: Center=%d Turn90=%d\n", centerTicks, turn90Ticks);
             Serial.printf("WiFi: Motors: Center=%d Turn90=%d\n", centerTicks, turn90Ticks);
         }
     }
-    //addition for turning speed controll
+    else if (cmd.startsWith("TURN180 ")){
+        int ticks = cmd.substring(8).toInt();
+        Motors::updateTurn_180_Ticks(ticks);
+        client.printf("✓ Turn 180° Ticks = %d\n", ticks);
+    }
+    //addition for turnings speed controll
     else if (cmd.startsWith("TS ")) {
         int speed = cmd.substring(3).toInt();
         Motors::updateSpeeds(150, speed, 200);

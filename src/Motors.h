@@ -35,7 +35,9 @@ public:
     void clearEncoders();
     
     // WiFi tuning methods
-    static void updateTurnTicks(int ticks90);
+    static void updateTurn_90_Ticks(int ticks90);
+    static void updateTurn_180_Ticks(int ticks180);
+
     static void updateCenterTicks(int ticks);
     static void updateSpeeds(int base, int turn, int max);
 
