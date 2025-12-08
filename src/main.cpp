@@ -34,8 +34,7 @@ float lastError = 0;
 float integral = 0;
 float maxIntegral = 1000;  // Prevent integral windup
 
-int baseSpeed = 130;
-int turnSpeed = 190;
+int baseSpeed = 130;    // general base speed for normal runs
 int maxSpeed = 250;
 int highSpeed = 200;  // For solving case
 
@@ -48,7 +47,7 @@ int delayBeforeCenter = 100;
 int delayAfterCenter = 100;
 
 // === Junction Settings ===
-unsigned long junctionDebounce = 500;  // ms between junction detections
+unsigned long junctionDebounce = 240;  // ms between junction detections
 unsigned long lastJunctionTime = 0;
 int junctionCount = 0;
 
@@ -170,7 +169,7 @@ unsigned long getDynamicDebounce() {
     if (baseSpeed == 0) return junctionDebounce;
     
     // Inverted ratio: BASE_SPEED / currentSpeed
-    float speedRatio = (float)BASE_SPEED / (float)baseSpeed;
+    float speedRatio = (float)maxSpeed / (float)baseSpeed;
     unsigned long dynamicValue = (unsigned long)(junctionDebounce * speedRatio);
     
     // Clamp to reasonable range
@@ -460,6 +459,7 @@ void loop() {
                         delay(100);
                     }
                     else{
+                        motors.clearEncoders(); //for next junction
                         runPID(baseSpeed);
                     }
                 }
@@ -949,7 +949,7 @@ void processCommand(String cmd) {
     //addition for turning speed controll
     else if (cmd.startsWith("TS ")) {
         int speed = cmd.substring(3).toInt();
-        Motors::updateSpeeds(140, speed, 200);
+        Motors::updateSpeeds(150, speed, 200);
         client.printf("✓ Turn 90° Ticks = %d\n", speed);
     }
 
