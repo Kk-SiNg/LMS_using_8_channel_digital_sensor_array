@@ -39,7 +39,7 @@ int maxSpeed = 250;
 int highSpeed = 200;  // For solving case
 
 //Addition
-int junction_indentification_delay = 20; //move these many ticks to reverify junction and get available paths
+int junction_identification_delay = 20; //move these many ticks to reverify junction and get available paths
 int line_end_confirmation_ticks = 50;
 
 // Delays
@@ -53,7 +53,8 @@ int junctionCount = 0;
 
 // === PATH SAVING CONSTANTS ===
 #define MAX_PATH_LENGTH 100
-#define SLOWDOWN_TICKS 500  // Ticks before junction to slow down in optimized run
+
+int SLOWDOWN_TICKS = 500;  // Ticks before junction to slow down in optimized run
 
 // === PATH STORAGE ===
 String rawPath = "";
@@ -324,21 +325,35 @@ void loop() {
                 
                 // Is this a junction?  (more than just straight OR only left/right)
                 bool isJunction = (pathCount > 1) || (pathCount == 1 && !pathsA.straight);
+
+                client.printf("leftA: %d, rightA: \n", pathsA.left, pathsA.right);
                 
                 if (isJunction) {
                     // move for some ticks to get all sensors on junction
-                    motors.moveForward(junction_indentification_delay);
+                    motors.stopBrake();
+                    client.println("junction detected for 1st time\n");
+                    delay(1000);
+
+                    client.println("moving forward by junction_identification_delay");
+
+                    long segmentTicks = motors.getAverageCount();   // recorded earlier cuz moveforward will clear encoders.
+
+                    motors.moveForward(junction_identification_delay);
                     motors.stopBrake();
                     
+                    client.println("taking delay befor centering");
                     delay(delayBeforeCenter);
 
                     PathOptions pathsB = sensors.getAvailablePaths();
-                    
+                    client.printf("leftB: %d, rightB: %d \n", pathsB.left, pathsB.right);
+
                     //get accurate path
                     PathOptions paths;
                     paths.left = pathsA.left || pathsB.left;
                     paths.right = pathsA.right || pathsB.right;
                     paths.straight = pathsA.straight || pathsB.straight;
+
+                    client.printf("left: %d, right: %d \n", paths.left, paths.right);
 
                     // JunctionType jType = sensors.classifyJunction(paths);
 
@@ -349,16 +364,17 @@ void loop() {
                         if(paths.right) client.print("R");
                         client.println();
                     }
-                    
-                    // STEP 1: Move to center FIRST (part of segment)
+
+                    client.println("executing ticks to center");
                     motors.moveForward(TICKS_TO_CENTER);
+
+                    client.println("delaying After Center");
                     delay(delayAfterCenter);
 
-                    // STEP 2: Read complete segment (including center move)
-                    long segmentTicks = motors.getAverageCount();
+                    client.printf("segment length covered is: %d\n", segmentTicks + TICKS_TO_CENTER);
 
                     // STEP 3: Save segment
-                    pathSegments[pathIndex] = segmentTicks;
+                    pathSegments[pathIndex] = segmentTicks + TICKS_TO_CENTER;
 
                     // STEP 4: Clear encoders BEFORE turn
                     motors.clearEncoders();
@@ -396,7 +412,7 @@ void loop() {
                         motors.turn_90_left();
                         rawPath += 'L';
                     }
-                    else if (sensorVals[3] && sensorVals[4]) {
+                    else if ((sensorVals[3] || sensorVals[4]) && paths.straight) {
                         if (client && client.connected()) client.println("  → going straight");
                         rawPath += 'S';
                     }
@@ -430,6 +446,7 @@ void loop() {
                 else if (sensors.isLineEnd()){
                     
                     delay(100);
+                    long segmentTicks = motors.getAverageCount();   //recorded earlier cuz moveForward will clear encoders
                     motors.moveForward(line_end_confirmation_ticks);
                     motors.stopBrake();
                     delay(100);
@@ -442,8 +459,7 @@ void loop() {
                         motors.moveForward(TICKS_TO_CENTER - line_end_confirmation_ticks);
 
                         //Record and Save segment for backing up
-                        long segmentTicks = motors.getAverageCount();
-                        pathSegments[pathIndex] = segmentTicks;
+                        pathSegments[pathIndex] = segmentTicks + TICKS_TO_CENTER;
  
                         pathIndex++;
 
@@ -459,7 +475,7 @@ void loop() {
                         delay(100);
                     }
                     else{
-                        motors.clearEncoders(); //for next junction
+                        client.println("false line end detected");
                         runPID(baseSpeed);
                     }
                 }
@@ -953,6 +969,12 @@ void processCommand(String cmd) {
         client.printf("✓ Turn 90° Ticks = %d\n", speed);
     }
 
+    //solving state slow down
+    else if(cmd.startsWith("SLOW ")){
+        int ticks = cmd.substring(5).toInt(); 
+        SLOWDOWN_TICKS = ticks;
+        client.printf("SLOWDOWN_TICKS = %d\n", SLOWDOWN_TICKS);
+    }
 
     //addition for delays
     else if (cmd.startsWith("DBC ")){
