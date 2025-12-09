@@ -244,15 +244,18 @@ void loop() {
     if (millis() - lastDebugPrint > 1000) {
         bool sensorVals[8];
         sensors.getSensorArray(sensorVals);
-        
-        client.print("Sensor: [");
-        for(int i = 0; i < 8; i++) {
-            client.print(sensorVals[i] ? "█" : "·");
+
+        if (client && client.connected()){
+            
+            client.print("Sensor: [");
+            for(int i = 0; i < 8; i++) {
+                client.print(sensorVals[i] ? "█" : "·");
+            }
+            client.printf("] Err:%.1f Speed:%d Path:%s DynDB:%lums\n", 
+                            sensors.getLineError(), baseSpeed, rawPath.c_str(), getDynamicDebounce());
+            client.println();
+            
         }
-        client.printf("] Err:%.1f Speed:%d Path:%s DynDB:%lums\n", 
-                        sensors.getLineError(), baseSpeed, rawPath.c_str(), getDynamicDebounce());
-        client.println();
-        
         lastDebugPrint = millis();
     }
     
@@ -302,7 +305,7 @@ void loop() {
                 motors.stopBrake();
                 currentState = FINISHED;
                 Serial.println("\n>>> STOPPED");
-                if (client) client.println("\n>>> STOPPED");
+                if (client && client.connected()) client.println("\n>>> STOPPED");
                 break;
             }
             
@@ -326,28 +329,27 @@ void loop() {
                 // Is this a junction?  (more than just straight OR only left/right)
                 bool isJunction = (pathCount > 1) || (pathCount == 1 && !pathsA.straight);
 
-                client.printf("leftA: %d, rightA: %d \n", pathsA.left, pathsA.right);
-                client.println();
+                if (client && client.connected()) client.printf("leftA: %d, rightA: %d \n", pathsA.left, pathsA.right);
+                if (client && client.connected()) client.println();
                 
                 if (isJunction) {
                     // move for some ticks to get all sensors on junction
                     motors.stopBrake();
-                    client.println("junction detected for 1st time\n");
-                    // delay(1000);
+                    if (client && client.connected()) client.println("junction detected for 1st time\n");
 
-                    client.println("moving forward by junction_identification_delay");
+                    if (client && client.connected()) client.println("moving forward by junction_identification_delay");
 
                     long segmentTicks = motors.getAverageCount();   // recorded earlier cuz moveforward will clear encoders.
 
                     motors.moveForward(junction_identification_delay);
                     motors.stopBrake();
                     
-                    client.println("taking delay befor centering");
+                    if (client && client.connected()) client.println("taking delay befor centering");
                     delay(delayBeforeCenter);
 
                     PathOptions pathsB = sensors.getAvailablePaths();
-                    client.printf("leftB: %d, rightB: %d \n", pathsB.left, pathsB.right);
-                    client.println();
+                    if (client && client.connected()) client.printf("leftB: %d, rightB: %d \n", pathsB.left, pathsB.right);
+                    if (client && client.connected()) client.println();
 
                     //get accurate path
                     PathOptions paths;
@@ -355,8 +357,8 @@ void loop() {
                     paths.right = pathsA.right || pathsB.right;
                     paths.straight = pathsA.straight || pathsB.straight;
 
-                    client.printf("left: %d, right: %d \n", paths.left, paths.right);
-                    client.println();
+                    if (client && client.connected()) client.printf("left: %d, right: %d \n", paths.left, paths.right);
+                    if (client && client.connected()) client.println();
 
                     // JunctionType jType = sensors.classifyJunction(paths);
 
@@ -369,14 +371,14 @@ void loop() {
                         client.println();
                     }
 
-                    client.println("executing ticks to center");
+                    if (client && client.connected()) client.println("executing ticks to center");
                     motors.moveForward(TICKS_TO_CENTER);
 
-                    client.println("delaying After Center");
+                    if (client && client.connected()) client.println("delaying After Center");
                     delay(delayAfterCenter);
 
-                    client.printf("segment length covered is: %d\n", segmentTicks + TICKS_TO_CENTER);
-                    client.println();
+                    if (client && client.connected()) client.printf("segment length covered is: %d\n", segmentTicks + TICKS_TO_CENTER);
+                    if (client && client.connected()) client.println();
 
                     // STEP 3: Save segment
                     pathSegments[pathIndex] = segmentTicks + TICKS_TO_CENTER;
@@ -399,7 +401,7 @@ void loop() {
                         
                         unsigned long runTime = (millis() - runStartTime) / 1000;
                         
-                        if (client) {
+                        if (client && client.connected()) {
                             client.println("\n🏆 DRY RUN COMPLETE!");
                             client.printf("Time: %lus | Junctions: %d\n", runTime, junctionCount);
                             client.println();
@@ -481,7 +483,7 @@ void loop() {
                         delay(100);
                     }
                     else{
-                        client.println("false line end detected");
+                        if (client && client.connected()) client.println("false line end detected");
                         runPID(baseSpeed);
                     }
                 }
@@ -651,7 +653,7 @@ void loop() {
                     // Serial.print(": ");
                     
                     if (turn == 'L') {
-                        if (client && client.connected()) if (client && client.connected()) client.println("LEFT turn");
+                        if (client && client.connected()) client.println("LEFT turn");
                         motors.turn_90_left();
                     }
                     else if (turn == 'R') {
@@ -1074,10 +1076,11 @@ void printStatus() {
     client.printf("Speed: Base=%d High=%d\n", baseSpeed, highSpeed);
     client.printf("Junction Debounce: Base=%lums Dynamic=%lums\n", 
                  junctionDebounce, getDynamicDebounce());
-    client.printf("Motor Ticks: Center=%d Turn90=%d\n", TICKS_TO_CENTER, TICKS_FOR_90_DEG);
+    client.printf("Motor Ticks: Center=%d Turn90=%d Turn180=%d\n", TICKS_TO_CENTER, TICKS_FOR_90_DEG, TICKS_FOR_180_DEG);
     client.printf("Error: %.2f\n", sensors.getLineError());
     client.printf("Junctions: %d\n", junctionCount);
     client.printf("Path Index: %d\n", pathIndex);
     client.printf("On Line: %s\n", sensors.onLine() ? "YES" : "NO");
+    client.printf("Paths: %d\n", rawPath);
     client.println("==============\n");
 }
