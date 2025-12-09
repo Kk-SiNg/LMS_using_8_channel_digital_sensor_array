@@ -16,6 +16,7 @@
 // Access motor tick parameters for WiFi tuning
 extern int TICKS_TO_CENTER;
 extern int TICKS_FOR_90_DEG;
+extern int MIN_TURN_PERCENT;
 
 // === WiFi Server ===
 WiFiServer server(TELNET_PORT);
@@ -416,10 +417,10 @@ void loop() {
                     bool sensorVals[8];
                     sensors.getSensorArray(sensorVals);
 
-                    // === LSRB Logic: Left > Straight > Right > Back ===
+                    // === LSRB Logic:  Left > Straight > Right > Back ===
                     if (paths.left) {
                         if (client && client.connected()) client.println("  → taking left");
-                        motors.turn_90_left();
+                        motors.turn_90_left_smart(sensors);  // CHANGED: Use smart turn
                         rawPath += 'L';
                     }
                     else if ((sensorVals[3] || sensorVals[4]) && paths.straight) {
@@ -428,13 +429,13 @@ void loop() {
                     }
                     else if (paths.right) {
                         if (client && client.connected()) client.println("  → Taking RIGHT");
-                        motors.turn_90_right();
+                        motors.turn_90_right_smart(sensors);  // CHANGED: Use smart turn
                         rawPath += 'R';
                     }
                     else {
                         // line end - turn back
                         if (client && client.connected()) client.println("    DEAD END - Turning back");
-                        motors.turn_180_back();
+                        motors.turn_180_back_smart(sensors);  // CHANGED: Use smart turn
                         rawPath += 'B';
                     }
                     
@@ -474,9 +475,9 @@ void loop() {
                         pathIndex++;
 
                         //turn and save path
-                        motors.turn_180_back();
+                        motors.turn_180_back_smart(sensors);  // CHANGED: Use smart turn
                         rawPath += 'B';
-                        
+
                         //reset
                         motors.clearEncoders();
                         lastError = 0;
@@ -979,6 +980,13 @@ void processCommand(String cmd) {
         Motors::updateTurn_180_Ticks(ticks);
         client.printf("✓ Turn 180° Ticks = %d\n", ticks);
     }
+    // NEW: Min turn percent tuning
+    else if (cmd.startsWith("MINTP ")) {
+        int percent = cmd.substring(6).toInt();
+        Motors::updateMinTurnPercent(percent);
+        client.printf("✓ Min Turn Percent = %d%%\n", MIN_TURN_PERCENT);
+    }
+
     //addition for turnings speed controll
     else if (cmd.startsWith("TS ")) {
         int speed = cmd.substring(3).toInt();
@@ -1068,6 +1076,8 @@ void printMenu() {
     client.println("CENTER <ticks> - Set ticks to center");
     client.println("TURN90 <ticks> - Set 90° turn ticks");
     client.println("MOTORS <center> <turn90> - Set both");
+    client.println("TURN180 <ticks> - Set 180° turn ticks");
+    client.println("MINTP <percent> - Min % before sensor check (30-95)");
     client.println("================\n");
 }
 void printStatus() {

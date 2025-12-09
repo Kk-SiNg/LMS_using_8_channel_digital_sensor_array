@@ -7,6 +7,8 @@
 #include "Pins.h"
 #include <ESP32Encoder.h>
 
+class Sensors;
+
 // WiFi-tunable motor parameters (defined as extern, initialized in Motors.cpp)
 extern int TICKS_FOR_90_DEG;
 extern int TICKS_FOR_180_DEG;
@@ -14,6 +16,8 @@ extern int TICKS_TO_CENTER;
 extern int BASE_SPEED;
 extern int TURN_SPEED;
 extern int MAX_SPEED;
+extern int MIN_TURN_PERCENT;  // Minimum % of ticks before sensor check kicks in
+
 
 class Motors {
 public:
@@ -23,9 +27,16 @@ public:
     void setSpeeds(int leftSpeed, int rightSpeed);
     void stopBrake();
     
+    // Original encoder-only turn methods
     void turn_90_left();
     void turn_90_right();
     void turn_180_back();
+
+     // NEW: Smart turn methods with sensor feedback
+    void turn_90_left_smart(Sensors& sensors);
+    void turn_90_right_smart(Sensors& sensors);
+    void turn_180_back_smart(Sensors& sensors);
+
     void rotate();
     void moveForward(int ticks);
     
@@ -40,6 +51,8 @@ public:
 
     static void updateCenterTicks(int ticks);
     static void updateSpeeds(int base, int turn, int max);
+
+    static void updateMinTurnPercent(int percent);
 
 private:
     const int pwm_channel_left = 0;

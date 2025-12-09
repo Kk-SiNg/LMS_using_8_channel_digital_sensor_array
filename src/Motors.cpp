@@ -1,9 +1,11 @@
 /*
  * Motors.cpp
  * Motor control with WiFi-tunable parameters
+ * V3.2 - Added smart turn methods with sensor feedback
  */
 
 #include "Motors.h"
+#include "Sensors.h"
 #include <Arduino.h>
 
 // Define global tunable parameters can be changed externally via wifi
@@ -13,6 +15,7 @@ int TICKS_TO_CENTER = 350;
 int BASE_SPEED = 150;
 int TURN_SPEED = 150;
 int MAX_SPEED = 200;
+int MIN_TURN_PERCENT = 65;  // Start checking sensors after 65% of turn complete
 
 Motors::Motors() {}
 
@@ -81,6 +84,8 @@ void Motors::stopBrake() {
     ledcWrite(pwm_channel_right, 0);
 }
 
+// ========== ORIGINAL ENCODER-ONLY TURN METHODS ==========
+
 void Motors::turn_90_left() {
     leftEncoder.clearCount();
     rightEncoder.clearCount();
@@ -104,6 +109,84 @@ void Motors::turn_180_back() {
     while (leftEncoder.getCount() < TICKS_FOR_180_DEG) delay(1);
     stopBrake();
 }
+
+// ========== NEW:  SMART TURN METHODS WITH SENSOR FEEDBACK ==========
+
+void Motors::turn_90_left_smart(Sensors& sensors) {
+    leftEncoder.clearCount();
+    rightEncoder.clearCount();
+    setSpeeds(-TURN_SPEED, TURN_SPEED);
+    
+    // Calculate minimum ticks before we start checking sensors
+    long minTicks = (TICKS_FOR_90_DEG * MIN_TURN_PERCENT) / 100;
+    
+    while (rightEncoder.getCount() < TICKS_FOR_90_DEG) {
+        // After minimum ticks, check if center sensors see the line
+        if (rightEncoder.getCount() >= minTicks) {
+            bool sensorVals[8];
+            sensors.getSensorArray(sensorVals);
+            
+            // Check center sensors (S4 and S5 - indices 3 and 4)
+            // These are the primary line-following sensors
+            if (sensorVals[3] || sensorVals[4] || sensorVals[5]) {
+                break;  // Exit early - line found!
+            }
+        }
+        delay(1);
+    }
+    stopBrake();
+}
+
+void Motors::turn_90_right_smart(Sensors& sensors) {
+    leftEncoder.clearCount();
+    rightEncoder.clearCount();
+    setSpeeds(TURN_SPEED, -TURN_SPEED);
+    
+    // Calculate minimum ticks before we start checking sensors
+    long minTicks = (TICKS_FOR_90_DEG * MIN_TURN_PERCENT) / 100;
+    
+    while (leftEncoder.getCount() < TICKS_FOR_90_DEG) {
+        // After minimum ticks, check if center sensors see the line
+        if (leftEncoder.getCount() >= minTicks) {
+            bool sensorVals[8];
+            sensors.getSensorArray(sensorVals);
+            
+            // Check center sensors (S4 and S5 - indices 3 and 4)
+            if (sensorVals[2] || sensorVals[3] || sensorVals[4]) {
+                break;  // Exit early - line found!
+            }
+        }
+        delay(1);
+    }
+    stopBrake();
+}
+
+void Motors::turn_180_back_smart(Sensors& sensors) {
+    leftEncoder.clearCount();
+    rightEncoder.clearCount();
+    setSpeeds(TURN_SPEED, -TURN_SPEED);  // pivot from right
+    
+    // Calculate minimum ticks before we start checking sensors
+    long minTicks = (TICKS_FOR_180_DEG * MIN_TURN_PERCENT) / 100;
+    
+    while (leftEncoder.getCount() < TICKS_FOR_180_DEG) {
+        // After minimum ticks, check if center sensors see the line
+        if (leftEncoder.getCount() >= minTicks) {
+            bool sensorVals[8];
+            sensors.getSensorArray(sensorVals);
+            
+            // Check center sensors (S4 and S5 - indices 3 and 4)
+            // For 180° turns, we want to catch the line coming from behind
+            if (sensorVals[2] || sensorVals[3] || sensorVals[4]) {
+                break;  // Exit early - line found! 
+            }
+        }
+        delay(1);
+    }
+    stopBrake();
+}
+
+// ========== UTILITY METHODS ==========
 
 void Motors::rotate() {
     leftEncoder.clearCount();
@@ -136,6 +219,8 @@ void Motors::clearEncoders() {
     rightEncoder.clearCount();
 }
 
+// ========== WIFI TUNING METHODS ==========
+
 void Motors::updateTurn_90_Ticks(int ticks90) {
     TICKS_FOR_90_DEG = constrain(ticks90, 50, 1000);
 }
@@ -152,4 +237,8 @@ void Motors::updateSpeeds(int base, int turn, int max) {
     BASE_SPEED = constrain(base, 50, 255);
     TURN_SPEED = constrain(turn, 50, 255);
     MAX_SPEED = constrain(max, 100, 255);
+}
+
+void Motors::updateMinTurnPercent(int percent) {
+    MIN_TURN_PERCENT = constrain(percent, 30, 95);
 }
