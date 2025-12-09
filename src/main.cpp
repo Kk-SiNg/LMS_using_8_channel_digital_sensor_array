@@ -360,7 +360,8 @@ void loop() {
                     if (client && client.connected()) client.printf("left: %d, right: %d \n", paths.left, paths.right);
                     if (client && client.connected()) client.println();
 
-                    // JunctionType jType = sensors.classifyJunction(paths);
+                    JunctionType jType = sensors.classifyJunction(paths);
+                    if (client && client.connected()) client.printf("junction type: %d\n", jType);
 
                     if (client && client.connected()) {
                         client.printf("J%d: ", junctionCount);
@@ -380,18 +381,19 @@ void loop() {
                     if (client && client.connected()) client.printf("segment length covered is: %d\n", segmentTicks + TICKS_TO_CENTER);
                     if (client && client.connected()) client.println();
 
+                    //check for overflow of string length
+                    if (pathIndex >= MAX_PATH_LENGTH) {
+                        Serial.println("❌ ERROR: Path array full!");
+                        currentState = FINISHED;
+                        break;
+                    }
+
                     // STEP 3: Save segment
                     pathSegments[pathIndex] = segmentTicks + TICKS_TO_CENTER;
 
                     // STEP 4: Clear encoders BEFORE turn
                     motors.clearEncoders();
 
-                    if (pathIndex >= MAX_PATH_LENGTH) {
-                        Serial.println("❌ ERROR: Path array full!");
-                        currentState = FINISHED;
-                        break;
-                    }
-                    
                     junctionCount++;
 
                     if (sensors.isEndPoint()) {
@@ -889,8 +891,8 @@ void processCommand(String cmd) {
         }
         client.println("=================\n");
     }
-    else if (cmd == "DEBOUNCE ") {
-        int deb = cmd.substring(9).toFloat();
+    else if (cmd.startsWith("DEBOUNCE ")) {
+        int deb = cmd.substring(9).toInt();
         junctionDebounce = deb;
         client.println("\n=== Debounce Info ===");
         client.printf("Base Debounce: %lums\n", junctionDebounce);
@@ -1039,18 +1041,27 @@ void processCommand(String cmd) {
 
 void printMenu() {
     client.println("\n=== Commands ===");
-    client.println("START / STOP / RESET");
-    client.println("STATUS - Show status");
+    client.println("START / GO - Start robot");
+    client.println("STOP / S - Stop robot");
+    client.println("RESET / R - Reset to Run 1");
+    client.println("HELP / H - Show this menu");
+    client.println("STATUS / ST - Show status");
     client.println("PATH - Show path info");
     client.println("DEBOUNCE - Show debounce info");
     client.println("TEST - Test sensors");
     client.println("PID - Show PID values");
     client.println("");
-    client.println("=== Tuning ===");
-    client.println("KP <val> / KI <val> / KD <val>");
-    client.println("TUNE <kp> <ki> <kd>");
+    client.println("=== PID Tuning ===");
+    client.println("KP <val> - Set proportional gain");
+    client.println("KI <val> - Set integral gain");
+    client.println("KD <val> - Set derivative gain");
+    client.println("TUNE <kp> <ki> <kd> - Set all PID");
+    client.println("");
+    client.println("=== Speed Settings ===");
     client.println("SPEED <val> - Base speed");
     client.println("HIGHSPEED <val> - High speed for Run 2");
+    client.println("");
+    client.println("=== Junction Settings ===");
     client.println("JUNCTIONDB <ms> - Base junction debounce");
     client.println("");
     client.println("=== Motor Ticks ===");
@@ -1059,7 +1070,6 @@ void printMenu() {
     client.println("MOTORS <center> <turn90> - Set both");
     client.println("================\n");
 }
-
 void printStatus() {
     client.println("\n=== Status ===");
     client.print("State: ");
