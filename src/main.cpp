@@ -429,7 +429,7 @@ void loop() {
                     }
                     else {
                         // line end - turn back
-                        if (client && client.connected()) client.println("  → DEAD END - Turning back");
+                        if (client && client.connected()) client.println("    DEAD END - Turning back");
                         motors.turn_180_back();
                         rawPath += 'B';
                     }
@@ -617,7 +617,7 @@ void loop() {
                     integral = 0;
                     motors.clearEncoders();
                     
-                    while(digitalRead(USER_BUTTON) == LOW);
+                    while(digitalRead(USER_BUTTON) == LOW) delay(1);
                 }
             }
             break;
