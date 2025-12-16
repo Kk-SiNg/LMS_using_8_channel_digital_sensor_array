@@ -140,13 +140,13 @@ PathOptions Sensors::getAvailablePaths() {
     // Normal line = 2-3 sensors (as you described)
     if (activeCount >= 5) {
         // LEFT: S7 or S8 active
-        paths.left = (sensors[6] || sensors[7]);
+        paths.left = (sensors[6] && sensors[7]);
         
         // RIGHT: S1 or S2 active
-        paths.right = (sensors[0] || sensors[1]);
+        paths.right = (sensors[0] && sensors[1]);
         
         // STRAIGHT: S4 or S5 active (center)
-        paths.straight = (sensors[3] || sensors[4]);
+        paths.straight = (sensors[3] && sensors[4]);
     }
     else {
         // Normal line - not a junction (2-3 sensors)
