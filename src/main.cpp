@@ -44,8 +44,8 @@ int junction_identification_delay = 0; //move these many ticks to reverify junct
 int line_end_confirmation_ticks = 5;
 
 // Delays
-int delayBeforeCenter = 1000;
-int delayAfterCenter = 1000;
+int delayBeforeCenter = 65;
+int delayAfterCenter = 75;
 
 // === Junction Settings ===
 unsigned long junctionDebounce = 240;  // ms between junction detections
