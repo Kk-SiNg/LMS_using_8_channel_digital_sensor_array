@@ -11,9 +11,9 @@
 // Define global tunable parameters can be changed externally via wifi
 int TICKS_FOR_90_DEG = 293;
 int TICKS_FOR_180_DEG = 870;
-int TICKS_TO_CENTER = 158;
+int TICKS_TO_CENTER = 100;
 int BASE_SPEED = 130;
-int TURN_SPEED = 130;
+int TURN_SPEED = 115;
 int MAX_SPEED = 200;
 int MIN_TURN_PERCENT = 70;  // Start checking sensors after 65% of turn complete
 
