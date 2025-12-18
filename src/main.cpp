@@ -37,18 +37,18 @@ float maxIntegral = 1000;  // Prevent integral windup
 
 int baseSpeed = 120;    // general base speed for normal runs
 int maxSpeed = 250;     //max speed during run
-int highSpeed = 180;  // For solving case
+int highSpeed = 200;  // For solving case
 
 //Addition
 int junction_identification_delay = 0; //move these many ticks to reverify junction and get available paths
 int line_end_confirmation_ticks = 5;
 
 // Delays
-int delayBeforeCenter = 100;
-int delayAfterCenter = 100;
+int delayBeforeCenter = 1000;
+int delayAfterCenter = 1000;
 
 // === Junction Settings ===
-unsigned long junctionDebounce = 150;  // ms between junction detections
+unsigned long junctionDebounce = 240;  // ms between junction detections
 unsigned long lastJunctionTime = 0;
 int junctionCount = 0;
 
@@ -381,7 +381,7 @@ void loop() {
                     
                     paths.left = (leftConfidence >= 0.1);  // 10% confidence threshold
                     paths.right = (rightConfidence >= 0.1);
-                    paths.straight = (straightConfidence >= 0.70);
+                    paths.straight = (straightConfidence >= 0.80);
                     
                     if (client && client.connected()) {
                         client.printf("Path confidence - L:  %.0f%%, S: %. 0f%%, R: %.0f%%\n",
@@ -489,24 +489,25 @@ void loop() {
                     lastError = sensors.getLineError();  // Use current error, not 0
                     integral = 0;
                     lastJunctionTime = millis();
-                    delay(10);
+                    delay(1000);
                 }
                 else if (sensors.isLineEnd()) {
                     
-                    delay(delayBeforeCenter);
+                    delay(100);
                     long segmentTicks = motors.getAverageCount();
                     motors.moveForward(line_end_confirmation_ticks);
                     motors.stopBrake();
+                    delay(1000);
 
                     if (sensors.isLineEnd()) {
-                        if (client && client.connected()) client.println(" DEAD END - Turning back");
+                        if (client && client.connected()) client.println("  → DEAD END - Turning back");
                         junctionCount++;
 
                         // MOVE TO CENTER
-                        motors.moveForward(TICKS_TO_CENTER - 85);
+                        motors.moveForward(20);
 
                         // Record and Save segment for backing up
-                        pathSegments[pathIndex] = segmentTicks + TICKS_TO_CENTER - 85 + line_end_confirmation_ticks;
+                        pathSegments[pathIndex] = segmentTicks + 20 + line_end_confirmation_ticks;
 
                         pathIndex++;
 
@@ -519,7 +520,7 @@ void loop() {
                         lastError = 0;
                         integral = 0;
                         lastJunctionTime = millis();
-                        delay(delayAfterCenter);
+                        delay(1000);
                     }
                     else {
                         if (client && client. connected()) client.println("false line end detected");
@@ -738,9 +739,7 @@ void loop() {
                     motors.stopBrake();
                     solvePathIndex++;
                     solveState = SOLVE_TURN;
-                    delay(100);
                 }
-                
             }
             else if (solveState == SOLVE_FINAL_RUN) {
                 runPID(baseSpeed);
