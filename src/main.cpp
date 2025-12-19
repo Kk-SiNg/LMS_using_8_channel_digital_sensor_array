@@ -35,7 +35,7 @@ float lastError = 0;
 float integral = 0;
 float maxIntegral = 1000;  // Prevent integral windup
 
-int baseSpeed = 134;    // general base speed for normal runs
+int baseSpeed = 125;    // general base speed for normal runs
 int maxSpeed = 250;     //max speed during run
 int highSpeed = 134;  // For solving case
 
@@ -60,7 +60,7 @@ int junctionCount = 0;
 // === PATH SAVING CONSTANTS ===
 #define MAX_PATH_LENGTH 100
 
-int SLOWDOWN_TICKS = 500;  // Ticks before junction to slow down in optimized run
+int SLOWDOWN_TICKS = 100;  // Ticks before junction to slow down in optimized run
 
 // === PATH STORAGE ===
 String rawPath = "";
@@ -633,7 +633,6 @@ void loop() {
                 client.print(rawPath.length() - optimizedPath.length());
                 client.println(" moves!");
             }
-
             currentState = WAIT_FOR_RUN_2;
             solvePathIndex = 0;
             break;
@@ -690,12 +689,6 @@ void loop() {
                 else {
                     char turn = optimizedPath[solvePathIndex];
                     
-                    // Serial.print("Segment ");
-                    // Serial.print(solvePathIndex);
-                    // Serial.print("/");
-                    // Serial.print(optimizedPathLength);
-                    // Serial.print(": ");
-                    
                     if (turn == 'L') {
                         if (client && client.connected()) client.println("LEFT turn");
                         motors.turn_90_left();
@@ -731,21 +724,34 @@ void loop() {
                 else {
                     solveState = SOLVE_SLOW_RUN;
                 }
-                delay(dl4);
+                PathOptions pathsA = sensors.getAvailablePaths();
+                
+                // Count available pathsA
+                int pathCounter = 0;
+                if (pathsA.left) pathCounter++;
+                if (pathsA.right) pathCounter++;
+                if (pathsA.straight) pathCounter++;
+                
+                // Is this a junction?  (more than just straight OR only left/right)
+                bool isJunction = (pathCounter > 1) || (pathCounter == 1 && !pathsA.straight);
+                if(isJunction){
+                    motors.stopBrake();
+                    solvePathIndex++;
+                    solveState = SOLVE_SLOW_RUN;
+                    delay(dl4);
+                }
             }
             else if (solveState == SOLVE_SLOW_RUN) {
                 long currentTicks = motors.getAverageCount();
                 long targetTicks = optimizedSegments[solvePathIndex];
                 
-                if (currentTicks < targetTicks) {
-                    runPID(baseSpeed);  // Slow down for accuracy
-                }
-                else {
-                    motors.stopBrake();
-                    solvePathIndex++;
-                    solveState = SOLVE_TURN;
-                }
-                delay(dl5);
+                motors.moveForward(SLOWDOWN_TICKS/2);  // Slow down for accuracy
+
+                motors.stopBrake();
+                solvePathIndex++;
+                solveState = SOLVE_TURN;
+                delay(dl4);
+                
             }
             else if (solveState == SOLVE_FINAL_RUN) {
                 runPID(baseSpeed);
@@ -1035,6 +1041,12 @@ void processCommand(String cmd) {
         int speed = cmd.substring(3).toInt();
         Motors::updateSpeeds(150, speed, 200);
         client.printf("✓ Turn 90° Ticks = %d\n", speed);
+    }
+    // slowdown ticks
+    else if (cmd.startsWith("SDT ")) {
+        int ticks = cmd.substring(4).toInt();
+        SLOWDOWN_TICKS = ticks;
+        client.printf("✓ Slow_Down Ticks = %d\n", ticks);
     }
 
     //solving state slow down

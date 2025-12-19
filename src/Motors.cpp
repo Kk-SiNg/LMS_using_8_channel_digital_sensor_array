@@ -130,7 +130,7 @@ void Motors::turn_90_left_smart(Sensors& sensors) {
             
             // Check center sensors (S4 and S5 - indices 3 and 4)
             // These are the primary line-following sensors
-            if (sensorVals[3] || sensorVals[4] || sensorVals[5]) {
+            if (sensorVals[3] || sensorVals[4] || sensorVals[5] || sensorVals[6]) {
                 break;  // Exit early - line found!
             }
         }
@@ -154,7 +154,7 @@ void Motors::turn_90_right_smart(Sensors& sensors) {
             sensors.getSensorArray(sensorVals);
             
             // Check center sensors (S4 and S5 - indices 3 and 4)
-            if (sensorVals[2] || sensorVals[3] || sensorVals[4]) {
+            if (sensorVals[1] || sensorVals[2] || sensorVals[3] || sensorVals[4]) {
                 break;  // Exit early - line found!
             }
         }
@@ -179,7 +179,7 @@ void Motors::turn_180_back_smart(Sensors& sensors) {
             
             // Check center sensors (S4 and S5 - indices 3 and 4)
             // For 180° turns, we want to catch the line coming from behind
-            if (sensorVals[2] || sensorVals[3] || sensorVals[4]) {
+            if (sensorVals[1] || sensorVals[2] || sensorVals[3] || sensorVals[4]) {
                 break;  // Exit early - line found! 
             }
         }
