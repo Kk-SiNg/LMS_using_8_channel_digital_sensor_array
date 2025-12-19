@@ -37,7 +37,7 @@ float maxIntegral = 1000;  // Prevent integral windup
 
 int baseSpeed = 125;    // general base speed for normal runs
 int maxSpeed = 250;     //max speed during run
-int highSpeed = 134;  // For solving case
+int highSpeed = 155;  // For solving case
 
 //Addition
 int junction_identification_delay = 0; //move these many ticks to reverify junction and get available paths
@@ -48,19 +48,19 @@ int delayBeforeCenter = 65;
 int delayAfterCenter = 75;
 int dl1 = 200;
 int dl2 = 500;
-int dl3 = 500;
-int dl4 = 500;
-int dl5 = 500;
+int dl3 = 150;
+int dl4 = 400;
+int dl5 = 200;
 
 // === Junction Settings ===
-unsigned long junctionDebounce = 240;  // ms between junction detections
+unsigned long junctionDebounce = 120;  // ms between junction detections
 unsigned long lastJunctionTime = 0;
 int junctionCount = 0;
 
 // === PATH SAVING CONSTANTS ===
 #define MAX_PATH_LENGTH 100
 
-int SLOWDOWN_TICKS = 100;  // Ticks before junction to slow down in optimized run
+int SLOWDOWN_TICKS = 90;  // Ticks before junction to slow down in optimized run
 
 // === PATH STORAGE ===
 String rawPath = "";
@@ -691,11 +691,11 @@ void loop() {
                     
                     if (turn == 'L') {
                         if (client && client.connected()) client.println("LEFT turn");
-                        motors.turn_90_left();
+                        motors.turn_90_left_smart(sensors);
                     }
                     else if (turn == 'R') {
                         if (client && client.connected()) client.println("RIGHT turn");
-                        motors.turn_90_right();
+                        motors.turn_90_right_smart(sensors);
                     }
                     else {
                         if (client && client.connected()) client.println("STRAIGHT");
@@ -736,7 +736,6 @@ void loop() {
                 bool isJunction = (pathCounter > 1) || (pathCounter == 1 && !pathsA.straight);
                 if(isJunction){
                     motors.stopBrake();
-                    solvePathIndex++;
                     solveState = SOLVE_SLOW_RUN;
                     delay(dl4);
                 }
@@ -745,12 +744,12 @@ void loop() {
                 long currentTicks = motors.getAverageCount();
                 long targetTicks = optimizedSegments[solvePathIndex];
                 
-                motors.moveForward(SLOWDOWN_TICKS/2);  // Slow down for accuracy
+                motors.moveForward(SLOWDOWN_TICKS);  // Slow down for accuracy
 
                 motors.stopBrake();
                 solvePathIndex++;
                 solveState = SOLVE_TURN;
-                delay(dl4);
+                delay(dl5);
                 
             }
             else if (solveState == SOLVE_FINAL_RUN) {
@@ -1034,6 +1033,10 @@ void processCommand(String cmd) {
         int percent = cmd.substring(6).toInt();
         Motors::updateMinTurnPercent(percent);
         client.printf("✓ Min Turn Percent = %d%%\n", MIN_TURN_PERCENT);
+    }
+    // add state change
+    else if (cmd.startsWith("WAIT")){
+        currentState = WAIT_FOR_RUN_2;
     }
 
     //addition for turnings speed controll
