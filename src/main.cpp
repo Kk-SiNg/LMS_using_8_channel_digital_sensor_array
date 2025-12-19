@@ -28,16 +28,16 @@ Motors motors;
 PathOptimization optimizer;
 
 // === Simple PID Variables ===
-float Kp = 14.0;   // Proportional gain
+float Kp = 15.0;   // Proportional gain
 float Ki = 0.0;    // Integral gain (start with 0)
-float Kd = 4.0;   // Derivative gain
+float Kd = 1.0;   // Derivative gain
 float lastError = 0;
 float integral = 0;
 float maxIntegral = 1000;  // Prevent integral windup
 
-int baseSpeed = 120;    // general base speed for normal runs
+int baseSpeed = 134;    // general base speed for normal runs
 int maxSpeed = 250;     //max speed during run
-int highSpeed = 200;  // For solving case
+int highSpeed = 134;  // For solving case
 
 //Addition
 int junction_identification_delay = 0; //move these many ticks to reverify junction and get available paths
@@ -46,6 +46,11 @@ int line_end_confirmation_ticks = 5;
 // Delays
 int delayBeforeCenter = 65;
 int delayAfterCenter = 75;
+int dl1 = 200;
+int dl2 = 500;
+int dl3 = 500;
+int dl4 = 500;
+int dl5 = 500;
 
 // === Junction Settings ===
 unsigned long junctionDebounce = 240;  // ms between junction detections
@@ -381,7 +386,7 @@ void loop() {
                     
                     paths.left = (leftConfidence >= 0.1);  // 10% confidence threshold
                     paths.right = (rightConfidence >= 0.1);
-                    paths.straight = (straightConfidence >= 0.80);
+                    paths.straight = (straightConfidence >= 0.85);  // 85% confidence threshold
                     
                     if (client && client.connected()) {
                         client.printf("Path confidence - L:  %.0f%%, S: %. 0f%%, R: %.0f%%\n",
@@ -489,15 +494,14 @@ void loop() {
                     lastError = sensors.getLineError();  // Use current error, not 0
                     integral = 0;
                     lastJunctionTime = millis();
-                    delay(1000);
+                    delay(dl1);
                 }
                 else if (sensors.isLineEnd()) {
                     
-                    delay(100);
                     long segmentTicks = motors.getAverageCount();
                     motors.moveForward(line_end_confirmation_ticks);
                     motors.stopBrake();
-                    delay(1000);
+                    delay(dl2);
 
                     if (sensors.isLineEnd()) {
                         if (client && client.connected()) client.println("  → DEAD END - Turning back");
@@ -520,7 +524,7 @@ void loop() {
                         lastError = 0;
                         integral = 0;
                         lastJunctionTime = millis();
-                        delay(1000);
+                        delay(dl1);
                     }
                     else {
                         if (client && client. connected()) client.println("false line end detected");
@@ -714,7 +718,7 @@ void loop() {
                     }
                     lastError = 0;
                     integral = 0;
-                    delay(100);
+                    delay(dl3);
                 }
             }
             else if (solveState == SOLVE_FAST_RUN) {
@@ -727,6 +731,7 @@ void loop() {
                 else {
                     solveState = SOLVE_SLOW_RUN;
                 }
+                delay(dl4);
             }
             else if (solveState == SOLVE_SLOW_RUN) {
                 long currentTicks = motors.getAverageCount();
@@ -740,6 +745,7 @@ void loop() {
                     solvePathIndex++;
                     solveState = SOLVE_TURN;
                 }
+                delay(dl5);
             }
             else if (solveState == SOLVE_FINAL_RUN) {
                 runPID(baseSpeed);
@@ -1051,7 +1057,37 @@ void processCommand(String cmd) {
         client.printf("delay after center: %d", dl);
         client.println();
     }
-    
+    else if (cmd.startsWith("DL1 ")){
+        int dl = cmd.substring(3).toInt(); 
+        dl1 = dl;
+        client.printf("changed dl1: %d", dl);
+        client.println();
+    }
+    else if (cmd.startsWith("DL2 ")){
+        int dl = cmd.substring(4).toInt(); 
+        dl2 = dl;
+        client.printf("changed dl2: %d", dl);
+        client.println();
+    }
+    else if (cmd.startsWith("DL3 ")){
+        int dl = cmd.substring(4).toInt(); 
+        dl3 = dl;
+        client.printf("changed dl3: %d", dl);
+        client.println();
+    }
+    else if (cmd.startsWith("DL4 ")){
+        int dl = cmd.substring(4).toInt(); 
+        dl4 = dl;
+        client.printf("changed dl4: %d", dl);
+        client.println();
+    }
+    else if (cmd.startsWith("DL5 ")){
+        int dl = cmd.substring(4).toInt(); 
+        dl5 = dl;
+        client.printf("changed dl4: %d", dl);
+        client.println();
+    }
+
     // === TESTING ===
     else if (cmd == "TEST" || cmd == "T") {
         bool sensors_arr[8];
