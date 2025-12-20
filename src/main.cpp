@@ -36,8 +36,8 @@ float integral = 0;
 float maxIntegral = 1000;  // Prevent integral windup
 
 int baseSpeed = 125;    // general base speed for normal runs
-int maxSpeed = 250;     //max speed during run
-int highSpeed = 155;  // For solving case
+int maxSpeed = 200;     //max speed during run
+int highSpeed = 145;  // For solving case
 
 //Addition
 int junction_identification_delay = 0; //move these many ticks to reverify junction and get available paths
@@ -49,8 +49,8 @@ int delayAfterCenter = 75;
 int dl1 = 200;
 int dl2 = 500;
 int dl3 = 150;
-int dl4 = 400;
-int dl5 = 200;
+int dl4 = 450;
+int dl5 = 250;
 
 // === Junction Settings ===
 unsigned long junctionDebounce = 120;  // ms between junction detections
@@ -60,7 +60,7 @@ int junctionCount = 0;
 // === PATH SAVING CONSTANTS ===
 #define MAX_PATH_LENGTH 100
 
-int SLOWDOWN_TICKS = 90;  // Ticks before junction to slow down in optimized run
+int SLOWDOWN_TICKS = 75;  // Ticks before junction to slow down in optimized run
 
 // === PATH STORAGE ===
 String rawPath = "";
