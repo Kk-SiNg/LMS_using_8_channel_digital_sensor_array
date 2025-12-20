@@ -30,12 +30,12 @@ PathOptimization optimizer;
 // === Simple PID Variables ===
 float Kp = 15.0;   // Proportional gain
 float Ki = 0.0;    // Integral gain (start with 0)
-float Kd = 1.0;   // Derivative gain
+float Kd = 0.7;   // Derivative gain
 float lastError = 0;
 float integral = 0;
 float maxIntegral = 1000;  // Prevent integral windup
 
-int baseSpeed = 125;    // general base speed for normal runs
+int baseSpeed = 122;    // general base speed for normal runs
 int maxSpeed = 200;     //max speed during run
 int highSpeed = 145;  // For solving case
 
@@ -139,6 +139,10 @@ void setup() {
     Serial.println("╚════════════════════════════════════════╝\n");
     
     pinMode(ONBOARD_LED, OUTPUT);
+    pinMode(RGB_PIN_R, OUTPUT);
+    pinMode(RGB_PIN_G, OUTPUT);
+    pinMode(RGB_PIN_B, OUTPUT);
+    
     pinMode(USER_BUTTON, INPUT_PULLUP);
     
     // Initialize motors and sensors
@@ -270,13 +274,14 @@ void loop() {
         
         case WAIT_FOR_RUN_1:
         {
+            digitalWrite(RGB_PIN_R, LOW);
+            digitalWrite(RGB_PIN_B, HIGH);
+            digitalWrite(RGB_PIN_G, LOW);
+
             // Wait for button press or START command
             if (digitalRead(USER_BUTTON) == LOW || robotRunning) {
                 delay(50);  // Debounce
                 if (digitalRead(USER_BUTTON) == LOW || robotRunning) {
-                    Serial.println("\n╔════════════════════════════════════════╗");
-                    Serial.println("║     RUN 1: MAPPING STARTED            ║");
-                    Serial.println("╚════════════════════════════════════════╝\n");
                     
                     if (client && client.connected()) {
                         client.println("\n>>> RUN 1: MAPPING STARTED!");
@@ -300,6 +305,10 @@ void loop() {
                     
                     // Wait for button release
                     while(digitalRead(USER_BUTTON) == LOW) delay(10);
+
+                    digitalWrite(RGB_PIN_R, LOW);
+                    digitalWrite(RGB_PIN_B, LOW);
+                    digitalWrite(RGB_PIN_G, HIGH);
                 }
             }
             break;
@@ -310,16 +319,13 @@ void loop() {
             if (!robotRunning) {
                 motors.stopBrake();
                 currentState = FINISHED;
-                Serial.println("\n>>> STOPPED");
                 if (client && client.connected()) client.println("\n>>> STOPPED");
                 break;
             }
             
             // === Run PID Line Following ===
             runPID(baseSpeed);
-            
-            
-            
+
             // === Junction Detection (with dynamic debounce) ===
             unsigned long currentDebounce = getDynamicDebounce();
             
@@ -434,6 +440,11 @@ void loop() {
                     // Check for overflow
                     if (pathIndex >= MAX_PATH_LENGTH) {
                         Serial.println("❌ ERROR: Path array full!");
+
+                        digitalWrite(RGB_PIN_R, HIGH);
+                        digitalWrite(RGB_PIN_B, LOW);
+                        digitalWrite(RGB_PIN_G, LOW);
+
                         currentState = FINISHED;
                         break;
                     }
@@ -458,8 +469,16 @@ void loop() {
                             client.printf("Time: %lus | Junctions: %d\n", runTime, junctionCount);
                             client.println();
                         }
-                        
+
+                        motors.moveForward(100);
+                        motors.stopBrake();
+
+                        digitalWrite(RGB_PIN_R, HIGH);
+                        digitalWrite(RGB_PIN_B, LOW);
+                        digitalWrite(RGB_PIN_G, LOW);
+
                         currentState = OPTIMIZING;
+                        digitalWrite(RGB_PIN_R, HIGH);
                         break;
                     }
                     
@@ -596,10 +615,6 @@ void loop() {
                 delay(1);
             }
             
-            Serial.print("\n✓ Optimization complete after ");
-            Serial.print(iterations);
-            Serial.println(" iterations");
-            
             if(consecutiveNoChange >= MAX_NO_CHANGE) {
                 Serial.println("  (converged - no further improvements)");
             }
@@ -640,6 +655,11 @@ void loop() {
         
         case WAIT_FOR_RUN_2:
         {
+
+            digitalWrite(RGB_PIN_R, HIGH);
+            digitalWrite(RGB_PIN_B, LOW);
+            digitalWrite(RGB_PIN_G, LOW);
+
             if (digitalRead(USER_BUTTON) == LOW || (robotRunning && optimizedPath.length() > 0)) {
                 delay(50);
                 if (digitalRead(USER_BUTTON) == LOW || robotRunning) {
@@ -663,6 +683,10 @@ void loop() {
                     motors.clearEncoders();
                     
                     while(digitalRead(USER_BUTTON) == LOW) delay(1);
+
+                    digitalWrite(RGB_PIN_R, LOW);
+                    digitalWrite(RGB_PIN_B, HIGH);
+                    digitalWrite(RGB_PIN_G, HIGH);
                 }
             }
             break;
@@ -757,6 +781,7 @@ void loop() {
                 
                 // Check for finish (line end)
                 if (sensors.isEndPoint()) {
+                    motors.moveForward(150);
                     motors.stopBrake();
                     robotRunning = false;
                     
@@ -779,6 +804,11 @@ void loop() {
             
         case FINISHED:
         {
+
+            digitalWrite(RGB_PIN_R, HIGH);
+            digitalWrite(RGB_PIN_B, HIGH);
+            digitalWrite(RGB_PIN_G, LOW);
+
             // Victory blink
             int i = 0;
             while(i < 200){
