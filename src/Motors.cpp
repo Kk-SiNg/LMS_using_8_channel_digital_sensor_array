@@ -9,13 +9,13 @@
 #include <Arduino.h>
 
 // Define global tunable parameters can be changed externally via wifi
-int TICKS_FOR_90_DEG = 360;
+int TICKS_FOR_90_DEG = 400;    //old 360
 int TICKS_FOR_180_DEG = 870;
-int TICKS_TO_CENTER = 100;
+int TICKS_TO_CENTER = 85;       //old 100
 int BASE_SPEED = 130;
 int TURN_SPEED = 125;
 int MAX_SPEED = 200;
-int MIN_TURN_PERCENT = 70;  // Start checking sensors after 65% of turn complete
+int MIN_TURN_PERCENT = 50;  // Start checking sensors after 65% of turn complete
 
 Motors::Motors() {}
 

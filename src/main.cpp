@@ -490,6 +490,8 @@ void loop() {
                         if (client && client.connected()) client.println("  → Taking LEFT");
                         motors.turn_90_left_smart(sensors);
                         rawPath += 'L';
+
+                        
                     }
                     else if ((sensorVals[3] || sensorVals[4]) || paths.straight) {
                         if (client && client.connected()) client.println("  → Going STRAIGHT");
@@ -861,6 +863,8 @@ void runPID(int speed) {
     // Save for next iteration
     lastError = error;
 }
+
+
 
 String junctionTypeToString(JunctionType type) {
     switch(type) {
