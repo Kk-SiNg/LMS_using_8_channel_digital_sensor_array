@@ -18,6 +18,7 @@ extern int TICKS_TO_CENTER;
 extern int TICKS_FOR_90_DEG;
 extern int MIN_TURN_PERCENT;
 
+
 // === WiFi Server ===
 WiFiServer server(TELNET_PORT);
 WiFiClient client;
@@ -51,6 +52,15 @@ int dl2 = 500;
 int dl3 = 150;
 int dl4 = 450;
 int dl5 = 250;
+
+// // Alignment correction
+// int adjusted_speed = 100;
+// int align_corr_time = 100;
+// float correction_multiplier = 1.5;
+// int initial_ticks = 0;
+
+// //new extra movement for alignment correction
+// int extra_ticks = 0;
 
 // === Junction Settings ===
 unsigned long junctionDebounce = 120;  // ms between junction detections
@@ -106,6 +116,7 @@ unsigned long solvingStartTime = 0;
 unsigned long lastWiFiUpdate = 0;
 unsigned long lastDebugPrint = 0;
 
+
 // === Emergency Stop ===
 unsigned long buttonPressStart = 0;
 
@@ -124,7 +135,7 @@ void processCommand(String cmd);
 void printMenu();
 void printStatus();
 void printMotorParams();
-void runPID(int speed);
+void runPID(int speed, float correction_multiplier = 1.0f);
 String junctionTypeToString(JunctionType type);
 unsigned long getDynamicDebounce();
 
@@ -184,7 +195,7 @@ unsigned long getDynamicDebounce() {
     unsigned long dynamicValue = (unsigned long)(junctionDebounce * speedRatio);
     
     // Clamp to reasonable range
-    return constrain(dynamicValue, 200, 800);
+    return constrain(dynamicValue, 150, 800);
 }
 
 void loop() {
@@ -432,7 +443,7 @@ void loop() {
                     
                     // Calculate total segment length
                     long totalSegmentLength = segmentTicks + samplingTicks + junction_identification_delay + TICKS_TO_CENTER;
-                    
+
                     if (client && client. connected()) {
                         client.printf("Segment length:  %ld ticks\n", totalSegmentLength);
                     }
@@ -490,8 +501,6 @@ void loop() {
                         if (client && client.connected()) client.println("  → Taking LEFT");
                         motors.turn_90_left_smart(sensors);
                         rawPath += 'L';
-
-                        
                     }
                     else if ((sensorVals[3] || sensorVals[4]) || paths.straight) {
                         if (client && client.connected()) client.println("  → Going STRAIGHT");
@@ -507,6 +516,17 @@ void loop() {
                         motors.turn_180_back_smart(sensors);
                         rawPath += 'B';
                     }
+
+                    // motors.clearEncoders();
+                    // // Alignment Correction
+                    // int time_taken = millis();
+                    // while ((millis() - time_taken) < align_corr_time) {
+                    //     runPID(adjusted_speed, correction_multiplier);
+                    // }
+                    // extra_ticks = motors.getAverageCount();
+                    // motors.stopBrake();
+                    // delay(1000);
+
                     
                     pathIndex++;
                     
@@ -518,7 +538,7 @@ void loop() {
                     delay(dl1);
                 }
                 else if (sensors.isLineEnd()) {
-                    
+                        
                     long segmentTicks = motors.getAverageCount();
                     motors.moveForward(line_end_confirmation_ticks);
                     motors.stopBrake();
@@ -739,6 +759,7 @@ void loop() {
                     integral = 0;
                     delay(dl3);
                 }
+
             }
             else if (solveState == SOLVE_FAST_RUN) {
                 long currentTicks = motors.getAverageCount();
@@ -830,7 +851,7 @@ void loop() {
 }
 
 // === PID Line Following ===
-void runPID(int speed) {
+void runPID(int speed, float correction_multiplier) {
     // Get current error from sensors
     float error = sensors.getLineError();
     
@@ -848,7 +869,7 @@ void runPID(int speed) {
     float correction = P + I + D;
     
     // Constrain correction
-    correction = constrain(correction, -speed, speed);
+    correction = constrain(correction, -speed, speed) * correction_multiplier;
     
     // Apply to motors
     int leftSpeed = speed - (int)correction;
@@ -1136,6 +1157,27 @@ void processCommand(String cmd) {
         client.printf("changed dl4: %d", dl);
         client.println();
     }
+
+    // pid alignment correction
+
+    // else if (cmd.startsWith("AS ")){
+    //     int speed = cmd.substring(3).toInt(); 
+    //     adjusted_speed = speed;
+    //     client.printf("changed adjusted speed: %d", speed);
+    //     client.println();
+    // }
+    // else if (cmd.startsWith("ACT ")){
+    //     int t = cmd.substring(4).toInt(); 
+    //     align_corr_time = t;
+    //     client.printf("changed alignment correction time: %d", t);
+    //     client.println();
+    // }
+    // else if (cmd.startsWith("CM ")){
+    //     float factor = cmd.substring(3).toInt(); 
+    //     correction_multiplier = factor;
+    //     client.printf("changed correction multiplier: %d", factor);
+    //     client.println();
+    // }
 
     // === TESTING ===
     else if (cmd == "TEST" || cmd == "T") {
