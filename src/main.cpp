@@ -36,7 +36,7 @@ float integral = 0;
 float maxIntegral = 1000;  // Prevent integral windup
 
 int baseSpeed = 122;    // general base speed for normal runs
-int maxSpeed = 200;     //max speed during run
+int maxSpeed = 165;     //max speed during run
 int highSpeed = 145;  // For solving case
 
 //Addition
@@ -60,7 +60,7 @@ int junctionCount = 0;
 // === PATH SAVING CONSTANTS ===
 #define MAX_PATH_LENGTH 100
 
-int SLOWDOWN_TICKS = 75;  // Ticks before junction to slow down in optimized run
+int SLOWDOWN_TICKS = 85;  // Ticks before junction to slow down in optimized run
 
 // === PATH STORAGE ===
 String rawPath = "";
@@ -180,7 +180,7 @@ unsigned long getDynamicDebounce() {
     if (baseSpeed == 0) return junctionDebounce;
     
     // Inverted ratio: BASE_SPEED / currentSpeed
-    float speedRatio = (float)(maxSpeed-50) / (float)baseSpeed;
+    float speedRatio = (float)(200-50) / (float)baseSpeed;
     unsigned long dynamicValue = (unsigned long)(junctionDebounce * speedRatio);
     
     // Clamp to reasonable range
@@ -470,7 +470,7 @@ void loop() {
                             client.println();
                         }
 
-                        motors.moveForward(100);
+                        motors.moveForward(150);
                         motors.stopBrake();
 
                         digitalWrite(RGB_PIN_R, HIGH);
@@ -781,7 +781,7 @@ void loop() {
                 
                 // Check for finish (line end)
                 if (sensors.isEndPoint()) {
-                    motors.moveForward(150);
+                    motors.moveForward(250);
                     motors.stopBrake();
                     robotRunning = false;
                     
@@ -806,7 +806,7 @@ void loop() {
         {
 
             digitalWrite(RGB_PIN_R, HIGH);
-            digitalWrite(RGB_PIN_B, HIGH);
+            digitalWrite(RGB_PIN_B, LOW);
             digitalWrite(RGB_PIN_G, LOW);
 
             // Victory blink
